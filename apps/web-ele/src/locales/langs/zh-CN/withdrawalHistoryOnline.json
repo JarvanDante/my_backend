@@ -1,0 +1,81 @@
+{
+  "title": "在线提现记录",
+  "search": {
+    "userId": "会员ID:",
+    "userIdPlaceholder": "请输入会员ID",
+    "username": "会员账号:",
+    "usernamePlaceholder": "请输入会员账号",
+    "tradeNo": "流水单号:",
+    "tradeNoPlaceholder": "请输入流水单号",
+    "status": "订单状态",
+    "statusPlaceholder": "请选择状态",
+    "rangeSeparator": "~",
+    "startTime": "开始时间",
+    "endTime": "结束时间",
+    "search": "搜索",
+    "reset": "重置"
+  },
+  "status": {
+    "placeholder": "请选择状态",
+    "pending": "待审核",
+    "success": "成功",
+    "failed": "失败",
+    "cancelled": "已取消"
+  },
+  "table": {
+    "tradeNo": "流水单号",
+    "userId": "会员ID",
+    "username": "会员账号",
+    "money": "提现金额",
+    "createdAt": "申请时间",
+    "updatedAt": "审核时间",
+    "remark": "备注",
+    "status": "状态",
+    "actions": "操作"
+  },
+  "actions": {
+    "review": "审核"
+  },
+  "dialog": {
+    "title": "提现审核",
+    "memberCheck": "会员提现核查",
+    "memberInfo": "会员提现信息",
+    "todayWithdrawCount": "今日提现次数",
+    "lastWithdrawTime": "上次提现时间",
+    "currentWithdrawTime": "本次提现时间",
+    "totalRechargeCount": "总充值次数",
+    "validBet": "有效投注",
+    "calcValidBet": "计算流水有效投注",
+    "needFlow": "所需流水",
+    "remainFlow": "还需流水",
+    "todayRecharge": "当日充值金额",
+    "todayWithdraw": "当日提现金额",
+    "todayWinLose": "当日输赢",
+    "todayDamaRate": "当日打码倍数",
+    "vipLevel": "VIP等级",
+    "registerTime": "注册时间",
+    "registerChannel": "注册渠道",
+    "registerIp": "注册IP",
+    "totalRecharge": "总充值金额",
+    "totalWithdraw": "总提现金额",
+    "totalWinLose": "总输赢",
+    "totalDamaRate": "总打码倍数",
+    "bankName": "提现银行",
+    "cardNo": "卡号",
+    "currentMoney": "本次提现金额",
+    "isApproved": "是否通过",
+    "approve": "通过",
+    "reject": "拒绝",
+    "rejectReason": "拒绝原因",
+    "rejectReasonPlaceholder": "请输入拒绝原因",
+    "cancel": "取消",
+    "confirm": "确定"
+  },
+  "message": {
+    "fetchFailed": "获取提现记录失败",
+    "fetchDetailFailed": "获取审核详情失败",
+    "rejectReasonRequired": "请填写拒绝原因",
+    "reviewSuccess": "审核成功",
+    "reviewFailed": "审核失败"
+  }
+}

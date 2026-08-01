@@ -1,0 +1,21 @@
+{
+  "welcomeBack": "欢迎回来",
+  "pageTitle": "漫隐·后台",
+  "pageDesc": "站点运营管理后台",
+  "loginSuccess": "登录成功",
+  "loginSuccessDesc": "欢迎回来",
+  "loginAgainTitle": "登录已过期",
+  "loginAgainSubTitle": "请重新登录以继续",
+  "username": "账号",
+  "password": "密码",
+  "usernameTip": "请输入账号",
+  "passwordTip": "请输入密码",
+  "rememberMe": "记住我",
+  "forgetPassword": "忘记密码?",
+  "logoutSuccess": "退出成功",
+  "layout": {
+    "center": "居中布局",
+    "alignLeft": "左对齐",
+    "alignRight": "右对齐"
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "title": "User Grade Management",
+  "subtitle": "Configure upgrade conditions and rebate rates for different VIP levels",
+  "actions": {
+    "save": "Save Settings",
+    "reset": "Reset Settings",
+    "delete": "Delete",
+    "query": "Query"
+  },
+  "table": {
+    "gradeName": "Grade Name",
+    "memberCount": "Member Count",
+    "upgradeCondition": "Upgrade Condition (Valid Bet)",
+    "depositBonus": "Deposit Bonus",
+    "withdrawBonus": "Withdrawal Bonus",
+    "lottery": "Lottery Rebate",
+    "sports": "Sports Rebate",
+    "live": "Live Casino Rebate",
+    "esports": "Esports Rebate",
+    "fishing": "Fishing Rebate",
+    "actions": "Actions"
+  },
+  "unit": {
+    "yuan": "",
+    "percent": "%"
+  },
+  "dialog": {
+    "resetConfirm": "Are you sure you want to reset all grade settings? This action cannot be undone.",
+    "resetTitle": "Confirm Reset",
+    "deleteConfirm": "Are you sure you want to delete grade \"{name}\"? This action cannot be undone.",
+    "deleteTitle": "Confirm Delete",
+    "confirm": "Confirm",
+    "cancel": "Cancel"
+  },
+  "message": {
+    "loadFailed": "Failed to load grade data",
+    "saveFailed": "Failed to save",
+    "saveSuccess": "Saved successfully",
+    "resetSuccess": "Reset successfully",
+    "deleteFailed": "Failed to delete",
+    "deleteSuccess": "Deleted successfully"
+  },
+  "tips": {
+    "editHint": "💡 Click on values in the table to edit directly, press Enter to save, press ESC to cancel",
+    "percentHint": "⚠️ Rebate rates are stored as decimals and displayed as percentages"
+  }
+}

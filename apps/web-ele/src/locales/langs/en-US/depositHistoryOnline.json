@@ -1,0 +1,64 @@
+{
+  "title": "Online Deposit History",
+  "search": {
+    "gateway": "Payment Type",
+    "gatewayPlaceholder": "Select",
+    "payment": "Payment Platform",
+    "paymentPlaceholder": "Select",
+    "account": "Department Name",
+    "accountPlaceholder": "Select",
+    "status": "Deposit Status",
+    "statusPlaceholder": "Select",
+    "rangeSeparator": "~",
+    "startTime": "Start Time",
+    "endTime": "End Time",
+    "username": "User Account",
+    "usernamePlaceholder": "Enter user account",
+    "tradeNo": "Transaction No.",
+    "tradeNoPlaceholder": "Enter transaction no.",
+    "query": "Query",
+    "reset": "Reset",
+    "export": "Export"
+  },
+  "gateway": {
+    "all": "All",
+    "wechat": "WeChat",
+    "alipay": "Alipay",
+    "unionpay": "UnionPay",
+    "usdt": "USDT"
+  },
+  "status": {
+    "all": "All",
+    "pending": "Pending",
+    "success": "Success",
+    "failed": "Failed",
+    "cancelled": "Cancelled"
+  },
+  "table": {
+    "tradeNo": "Transaction No.",
+    "username": "User Account",
+    "money": "Deposit Amount",
+    "gateway": "Payment Type",
+    "payment": "Payment Platform",
+    "domain": "Registration Domain",
+    "createdAt": "Created Time",
+    "updatedAt": "Completed Time",
+    "status": "Deposit Status",
+    "actions": "Actions"
+  },
+  "actions": {
+    "confirm": "Confirm Payment"
+  },
+  "dialog": {
+    "confirmTitle": "Information",
+    "confirmMessage": "Confirm that the deposit has been received?",
+    "confirm": "Confirm",
+    "cancel": "Cancel"
+  },
+  "message": {
+    "fetchFailed": "Failed to fetch deposit records",
+    "confirmSuccess": "Confirmed successfully",
+    "confirmFailed": "Failed to confirm payment",
+    "exportInfo": "Export function is under development"
+  }
+}

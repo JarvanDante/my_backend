@@ -1,0 +1,11 @@
+{
+  "login": "Login",
+  "logout": "Logout",
+  "prompt": "Prompt",
+  "cancel": "Cancel",
+  "confirm": "Confirm",
+  "back": "Back",
+  "backToHome": "Back To Home",
+  "loadingMenu": "Loading menu",
+  "noData": "No data"
+}

@@ -1,0 +1,64 @@
+{
+  "title": "在线充值记录",
+  "search": {
+    "gateway": "支付类型",
+    "gatewayPlaceholder": "请选择",
+    "payment": "支付平台",
+    "paymentPlaceholder": "请选择",
+    "account": "部门名称",
+    "accountPlaceholder": "请选择",
+    "status": "充值状态",
+    "statusPlaceholder": "请选择",
+    "rangeSeparator": "~",
+    "startTime": "开始时间",
+    "endTime": "结束时间",
+    "username": "会员账号",
+    "usernamePlaceholder": "请输入会员账号",
+    "tradeNo": "流水单号",
+    "tradeNoPlaceholder": "请输入流水单号",
+    "query": "查询",
+    "reset": "重置",
+    "export": "导出"
+  },
+  "gateway": {
+    "all": "全部",
+    "wechat": "微信",
+    "alipay": "支付宝",
+    "unionpay": "银联",
+    "usdt": "USDT"
+  },
+  "status": {
+    "all": "全部",
+    "pending": "待支付",
+    "success": "成功",
+    "failed": "失败",
+    "cancelled": "已取消"
+  },
+  "table": {
+    "tradeNo": "流水单号",
+    "username": "会员账号",
+    "money": "充值金额",
+    "gateway": "支付类型",
+    "payment": "支付平台",
+    "domain": "注册域名",
+    "createdAt": "创建时间",
+    "updatedAt": "完成时间",
+    "status": "充值状态",
+    "actions": "操作"
+  },
+  "actions": {
+    "confirm": "支付确认"
+  },
+  "dialog": {
+    "confirmTitle": "信息",
+    "confirmMessage": "是否确认充值已到账?",
+    "confirm": "确认",
+    "cancel": "取消"
+  },
+  "message": {
+    "fetchFailed": "获取充值记录失败",
+    "confirmSuccess": "确认成功",
+    "confirmFailed": "确认支付失败",
+    "exportInfo": "导出功能开发中"
+  }
+}

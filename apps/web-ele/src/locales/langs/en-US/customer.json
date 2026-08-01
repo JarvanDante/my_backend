@@ -1,0 +1,66 @@
+{
+  "search": {
+    "name": "Customer Name",
+    "namePlaceholder": "Please enter customer name",
+    "code": "Customer Code",
+    "codePlaceholder": "Please enter customer code",
+    "status": "Status",
+    "statusPlaceholder": "Please select status",
+    "query": "Query",
+    "reset": "Reset"
+  },
+  "table": {
+    "id": "ID",
+    "code": "Customer Code",
+    "name": "Customer Name",
+    "kvConfig": "KV Config Details",
+    "status": "Status",
+    "isSync": "Sync Status",
+    "isConfig": "Config Status",
+    "createdAt": "Created At",
+    "updatedAt": "Updated At",
+    "actions": "Actions"
+  },
+  "form": {
+    "name": "Customer Name",
+    "namePlaceholder": "Please enter customer name",
+    "nameRequired": "Please enter customer name",
+    "kvConfig": "KV Config Details",
+    "kvConfigPlaceholder": "Please enter KV config details",
+    "status": "Status",
+    "isSync": "Sync Status",
+    "isConfig": "Config Status"
+  },
+  "dialog": {
+    "editTitle": "Edit Customer"
+  },
+  "status": {
+    "all": "All",
+    "active": "Active",
+    "inactive": "Inactive"
+  },
+  "sync": {
+    "published": "Published",
+    "unpublished": "Unpublished"
+  },
+  "config": {
+    "configured": "Configured",
+    "notConfigured": "Not Configured"
+  },
+  "actions": {
+    "edit": "Edit",
+    "detail": "Detail",
+    "delete": "Delete",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm"
+  },
+  "message": {
+    "fetchFailed": "Failed to fetch customer list",
+    "updateSuccess": "Customer updated successfully",
+    "updateFailed": "Failed to update customer",
+    "deleteTitle": "Delete Confirmation",
+    "deleteConfirm": "Are you sure you want to delete customer '{name}'?",
+    "deleteTodo": "Delete function to be implemented"
+  }
+}
