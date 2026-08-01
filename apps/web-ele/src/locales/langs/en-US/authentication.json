@@ -1,0 +1,16 @@
+{
+  "welcomeBack": "Welcome Back",
+  "pageTitle": "MY Manage Console",
+  "pageDesc": "Multi-merchant site management",
+  "loginSuccess": "Login Success",
+  "loginSuccessDesc": "Welcome back",
+  "loginAgainTitle": "Login Expired",
+  "loginAgainSubTitle": "Please login again",
+  "username": "Username",
+  "password": "Password",
+  "usernameTip": "Please enter username",
+  "passwordTip": "Please enter password",
+  "rememberMe": "Remember Me",
+  "forgetPassword": "Forget Password?",
+  "logoutSuccess": "Logout Success"
+}

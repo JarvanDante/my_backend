@@ -1,0 +1,32 @@
+{
+  "title": "后台充值记录",
+  "search": {
+    "rangeSeparator": "~",
+    "startTime": "开始时间",
+    "endTime": "结束时间",
+    "pageSize": "每页20条",
+    "pageSizeOptions": {
+      "10": "10条",
+      "20": "20条",
+      "50": "50条",
+      "100": "100条"
+    },
+    "username": "会员账号",
+    "usernamePlaceholder": "请输入会员账号",
+    "query": "查询",
+    "reset": "重置"
+  },
+  "table": {
+    "tradeNo": "流水单号",
+    "userId": "会员ID",
+    "username": "会员账号",
+    "money": "充值金额",
+    "domain": "注册域名",
+    "remark": "操作原因",
+    "adminName": "操作员工",
+    "createdAt": "操作时间"
+  },
+  "message": {
+    "fetchFailed": "获取后台加款记录失败"
+  }
+}

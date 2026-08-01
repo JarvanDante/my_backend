@@ -1,0 +1,32 @@
+{
+  "title": "Balance Operation",
+  "search": {
+    "userId": "User ID:",
+    "userIdPlaceholder": "Enter user ID",
+    "query": "Query"
+  },
+  "dialog": {
+    "title": "Add/Deduct Balance",
+    "username": "User Account",
+    "balance": "Account Balance",
+    "balanceFrozen": "Frozen Amount",
+    "operationType": "Operation Type",
+    "operationTypePlaceholder": "Select payment name",
+    "operationAmount": "Operation Amount",
+    "operationAmountPlaceholder": "Enter operation amount",
+    "operationReason": "Operation Reason",
+    "operationReasonPlaceholder": "Enter operation reason",
+    "cancel": "Cancel",
+    "confirm": "Confirm"
+  },
+  "message": {
+    "userIdRequired": "Please enter user ID",
+    "queryBalanceFailed": "Failed to query user balance",
+    "operationTypeRequired": "Please select operation type",
+    "operationAmountRequired": "Please enter operation amount",
+    "operationReasonRequired": "Please enter operation reason",
+    "operationSuccess": "Operation successful",
+    "operationFailed": "Operation failed, please try again later",
+    "fetchOperationTypesFailed": "Failed to fetch operation types"
+  }
+}

@@ -1,0 +1,79 @@
+{
+  "title": "Staff Management",
+  "search": {
+    "username": "Admin Account",
+    "usernamePlaceholder": "Enter admin account",
+    "status": "Status",
+    "statusPlaceholder": "Select status",
+    "reset": "Reset",
+    "query": "Search"
+  },
+  "status": {
+    "all": "All",
+    "enabled": "Enabled",
+    "disabled": "Disabled"
+  },
+  "table": {
+    "id": "ID",
+    "username": "Admin Account",
+    "nickname": "Nickname",
+    "role": "Role",
+    "lastLoginIp": "Last Login IP",
+    "lastLoginTime": "Last Login Time",
+    "createdAt": "Created At",
+    "status": "Status",
+    "actions": "Actions"
+  },
+  "actions": {
+    "add": "Add Admin",
+    "edit": "Edit",
+    "delete": "Delete",
+    "viewLogs": "Operation Logs",
+    "cancel": "Cancel",
+    "save": "Save",
+    "submit": "Add"
+  },
+  "form": {
+    "username": "Staff Account",
+    "usernamePlaceholder": "Enter staff account",
+    "usernameHelp": "4-12 characters, letters and numbers",
+    "password": "Login Password",
+    "passwordPlaceholder": "Enter password",
+    "passwordPlaceholderEdit": "Leave blank to keep unchanged",
+    "passwordHelp": "6-20 characters, must contain uppercase, lowercase letters and numbers",
+    "nickname": "Nickname",
+    "nicknamePlaceholder": "Enter nickname",
+    "nicknameHelp": "e.g.: Jack, Liu, Manager Wang",
+    "role": "Position",
+    "rolePlaceholder": "Select position",
+    "roleHelp": "Select staff position with corresponding permissions; to modify permissions, please edit in role management",
+    "accountStatus": "Account Status",
+    "statusEnabled": "Enabled",
+    "statusDisabled": "Disabled"
+  },
+  "dialog": {
+    "addTitle": "Add Staff Account",
+    "editTitle": "Edit Staff Account",
+    "deleteConfirm": "Are you sure to delete this staff account?",
+    "deleteTitle": "Confirm"
+  },
+  "drawer": {
+    "logTitle": "'s Operation Logs",
+    "logTime": "Operation Time",
+    "logIp": "Client IP",
+    "logContent": "Operation Content"
+  },
+  "message": {
+    "fetchRolesFailed": "Failed to fetch roles",
+    "fetchAdminsFailed": "Failed to fetch admins",
+    "deleteSuccess": "Staff deleted successfully",
+    "deleteFailed": "Failed to delete staff",
+    "addSuccess": "Staff added successfully",
+    "addFailed": "Failed to add staff",
+    "editSuccess": "Staff updated successfully",
+    "editFailed": "Failed to update staff",
+    "fillComplete": "Please fill in all required fields",
+    "notFound": "Admin not found",
+    "fetchLogsFailed": "Failed to fetch operation logs"
+  }
+}

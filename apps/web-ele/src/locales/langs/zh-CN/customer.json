@@ -1,0 +1,66 @@
+{
+  "search": {
+    "name": "客户名称",
+    "namePlaceholder": "请输入客户名称",
+    "code": "客户编码",
+    "codePlaceholder": "请输入客户编码",
+    "status": "状态",
+    "statusPlaceholder": "请选择状态",
+    "query": "查询",
+    "reset": "重置"
+  },
+  "table": {
+    "id": "ID",
+    "code": "客户编码",
+    "name": "客户名称",
+    "kvConfig": "KV配置详情",
+    "status": "状态",
+    "isSync": "同步状态",
+    "isConfig": "配置状态",
+    "createdAt": "创建时间",
+    "updatedAt": "更新时间",
+    "actions": "操作"
+  },
+  "form": {
+    "name": "客户名称",
+    "namePlaceholder": "请输入客户名称",
+    "nameRequired": "请输入客户名称",
+    "kvConfig": "KV配置详情",
+    "kvConfigPlaceholder": "请输入KV配置详情",
+    "status": "状态",
+    "isSync": "同步状态",
+    "isConfig": "配置状态"
+  },
+  "dialog": {
+    "editTitle": "编辑客户"
+  },
+  "status": {
+    "all": "全部",
+    "active": "启用",
+    "inactive": "禁用"
+  },
+  "sync": {
+    "published": "已发布",
+    "unpublished": "未发布"
+  },
+  "config": {
+    "configured": "已配置",
+    "notConfigured": "未配置"
+  },
+  "actions": {
+    "edit": "编辑",
+    "detail": "详情",
+    "delete": "删除",
+    "save": "保存",
+    "cancel": "取消",
+    "confirm": "确认"
+  },
+  "message": {
+    "fetchFailed": "获取客户列表失败",
+    "updateSuccess": "更新客户成功",
+    "updateFailed": "更新客户失败",
+    "deleteTitle": "删除确认",
+    "deleteConfirm": "确定要删除客户 '{name}' 吗？",
+    "deleteTodo": "删除功能待实现"
+  }
+}

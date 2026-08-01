@@ -1,0 +1,32 @@
+{
+  "title": "System Withdrawal History",
+  "search": {
+    "userId": "User ID:",
+    "userIdPlaceholder": "Enter user ID",
+    "query": "Query",
+    "search": "Search",
+    "reset": "Reset"
+  },
+  "table": {
+    "tradeNo": "Transaction No.",
+    "username": "User Account",
+    "money": "Withdrawal Amount",
+    "remark": "Operation Reason",
+    "adminName": "Operator",
+    "createdAt": "Operation Time"
+  },
+  "dialog": {
+    "title": "Add/Deduct Balance",
+    "username": "User Account",
+    "balance": "Account Balance",
+    "balanceFrozen": "Frozen Amount",
+    "points": "Points",
+    "lastUpdateTime": "Last Update Time",
+    "close": "Close"
+  },
+  "message": {
+    "fetchFailed": "Failed to fetch system withdrawal records",
+    "userIdRequired": "Please enter user ID",
+    "queryBalanceFailed": "Failed to query user balance"
+  }
+}

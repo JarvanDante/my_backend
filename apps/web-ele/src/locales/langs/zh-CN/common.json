@@ -1,0 +1,11 @@
+{
+  "login": "登 录",
+  "logout": "退出登录",
+  "prompt": "提示",
+  "cancel": "取消",
+  "confirm": "确认",
+  "back": "返回",
+  "backToHome": "返回首页",
+  "loadingMenu": "加载菜单中",
+  "noData": "暂无数据"
+}

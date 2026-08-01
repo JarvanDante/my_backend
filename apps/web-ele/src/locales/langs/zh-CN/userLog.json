@@ -1,0 +1,30 @@
+{
+  "title": "会员日志",
+  "search": {
+    "username": "会员账号",
+    "usernamePlaceholder": "请输入会员账号",
+    "ip": "IP地址",
+    "ipPlaceholder": "请输入IP地址",
+    "operationTime": "操作时间",
+    "rangeSeparator": "至",
+    "startTime": "开始时间",
+    "endTime": "结束时间",
+    "reset": "重置",
+    "submit": "提交"
+  },
+  "table": {
+    "username": "会员账号",
+    "device": "终端",
+    "loginTime": "登录时间",
+    "referer": "来源",
+    "loginUrl": "登录网址",
+    "loginIp": "登录IP",
+    "loginAddress": "登录地区",
+    "os": "操作系统",
+    "network": "网络",
+    "browser": "浏览器"
+  },
+  "message": {
+    "fetchFailed": "获取数据失败"
+  }
+}

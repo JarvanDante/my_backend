@@ -1,0 +1,79 @@
+{
+  "title": "员工管理",
+  "search": {
+    "username": "管理员账号",
+    "usernamePlaceholder": "请输入管理员账号",
+    "status": "状态",
+    "statusPlaceholder": "请选择状态",
+    "reset": "重置",
+    "query": "查询"
+  },
+  "status": {
+    "all": "全部",
+    "enabled": "启用",
+    "disabled": "禁用"
+  },
+  "table": {
+    "id": "编号",
+    "username": "管理员账号",
+    "nickname": "昵称",
+    "role": "角色",
+    "lastLoginIp": "最后登录IP",
+    "lastLoginTime": "最后登录时间",
+    "createdAt": "创建时间",
+    "status": "状态",
+    "actions": "操作"
+  },
+  "actions": {
+    "add": "添加管理员",
+    "edit": "编辑",
+    "delete": "删除",
+    "viewLogs": "操作日志",
+    "cancel": "取消",
+    "save": "保存",
+    "submit": "添加"
+  },
+  "form": {
+    "username": "员工账号",
+    "usernamePlaceholder": "请输入员工账号",
+    "usernameHelp": "4-12位字符，包含字母、数字",
+    "password": "登录密码",
+    "passwordPlaceholder": "请输入密码",
+    "passwordPlaceholderEdit": "留空不变",
+    "passwordHelp": "6-20位字符，包含大小写字母和数字，必须由字母和数字组成",
+    "nickname": "昵称",
+    "nicknamePlaceholder": "请输入昵称",
+    "nicknameHelp": "例如：jack 小刘 王总",
+    "role": "职务",
+    "rolePlaceholder": "请选择职务",
+    "roleHelp": "选择员工职务，会对应相应的权限；如果要修改权限，请在职务权限中进行修改或添加",
+    "accountStatus": "账号状态",
+    "statusEnabled": "启用",
+    "statusDisabled": "停用"
+  },
+  "dialog": {
+    "addTitle": "添加员工账号",
+    "editTitle": "编辑员工账号",
+    "deleteConfirm": "确定删除该员工账号？",
+    "deleteTitle": "信息"
+  },
+  "drawer": {
+    "logTitle": "的操作日志",
+    "logTime": "操作时间",
+    "logIp": "客户端IP",
+    "logContent": "操作内容"
+  },
+  "message": {
+    "fetchRolesFailed": "获取角色列表失败",
+    "fetchAdminsFailed": "获取管理员列表失败",
+    "deleteSuccess": "删除员工成功",
+    "deleteFailed": "删除员工失败",
+    "addSuccess": "添加员工成功",
+    "addFailed": "添加员工失败",
+    "editSuccess": "编辑员工成功",
+    "editFailed": "编辑员工失败",
+    "fillComplete": "请填写完整信息",
+    "notFound": "未找到要编辑的管理员信息",
+    "fetchLogsFailed": "获取操作日志失败"
+  }
+}
