@@ -20,6 +20,7 @@ import { openWindow } from "@vben/utils";
 
 import { $t } from "#/locales";
 import { useAuthStore } from "#/store";
+import { siteBrandCode, siteBrandName } from "#/utils/site-brand";
 import LoginForm from "#/views/_core/authentication/login.vue";
 
 const notifications = ref<NotificationItem[]>([
@@ -136,6 +137,16 @@ watch(
 
 <template>
   <BasicLayout @clear-preferences-and-logout="handleLogout">
+    <template #logo-text>
+      <div class="site-brand flex min-w-0 flex-col justify-center leading-none">
+        <span class="site-brand__name truncate">
+          {{ siteBrandName }}
+        </span>
+        <span v-if="siteBrandCode" class="site-brand__code truncate">
+          {{ siteBrandCode }}
+        </span>
+      </div>
+    </template>
     <template #user-dropdown>
       <UserDropdown
         :avatar
@@ -169,3 +180,24 @@ watch(
     </template>
   </BasicLayout>
 </template>
+
+<style scoped>
+.site-brand__name {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: hsl(var(--foreground));
+}
+
+.site-brand__code {
+  margin-top: 4px;
+  max-width: 100%;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: hsl(var(--primary));
+  opacity: 0.72;
+}
+</style>

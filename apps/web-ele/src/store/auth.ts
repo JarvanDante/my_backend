@@ -12,6 +12,7 @@ import { defineStore } from "pinia";
 
 import { getAccessCodesApi, getUserInfoApi, loginApi, logoutApi } from "#/api";
 import { $t } from "#/locales";
+import { applySiteBrand, clearSiteBrand } from "#/utils/site-brand";
 
 export const useAuthStore = defineStore("auth", () => {
   const accessStore = useAccessStore();
@@ -86,7 +87,7 @@ export const useAuthStore = defineStore("auth", () => {
     } catch {
       // 不做任何处理
     }
-    localStorage.removeItem("VBEN_SITE_NAME");
+    clearSiteBrand();
     resetAllStores();
     accessStore.setLoginExpired(false);
 
@@ -105,10 +106,11 @@ export const useAuthStore = defineStore("auth", () => {
     let userInfo: null | UserInfo = null;
     userInfo = await getUserInfoApi();
     userStore.setUserInfo(userInfo);
-    // 动态品牌: 保存站点名, 刷新后 preferences 读取
-    if ((userInfo as any)?.site_name) {
-      localStorage.setItem("VBEN_SITE_NAME", (userInfo as any).site_name);
-    }
+    // 动态品牌: 登录后立刻刷新侧栏「中文名 + 英文简称」
+    applySiteBrand(
+      (userInfo as any)?.site_name,
+      (userInfo as any)?.site_code
+    );
     return userInfo;
   }
 

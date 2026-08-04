@@ -6,7 +6,8 @@ import { preferences } from '@vben/preferences';
 
 import { $t } from '#/locales';
 
-const appName = computed(() => preferences.app.name);
+// 登录页固定显示「后台」, 不展示已缓存的站点品牌
+const appName = computed(() => import.meta.env.VITE_APP_TITLE || '后台');
 const logo = computed(() => preferences.logo.source);
 const logoDark = computed(() => preferences.logo.sourceDark);
 </script>
