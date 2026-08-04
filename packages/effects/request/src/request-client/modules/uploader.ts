@@ -30,8 +30,10 @@ class FileUploader {
     const finalConfig: RequestClientConfig = {
       ...config,
       headers: {
-        'Content-Type': 'multipart/form-data',
         ...config?.headers,
+        // 必须删除默认 application/json; 也不要写死 multipart/form-data,
+        // 否则缺少 boundary, 服务端解析不到文件。
+        'Content-Type': undefined as unknown as string,
       },
     };
 
