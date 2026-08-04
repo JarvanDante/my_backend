@@ -1,7 +1,8 @@
-import { initPreferences } from '@vben/preferences';
+import { initPreferences, updatePreferences } from '@vben/preferences';
 import { unmountGlobalLoading } from '@vben/utils';
 
 import { overridesPreferences } from './preferences';
+import { restoreSiteBrandFromCache } from './utils/site-brand';
 
 /**
  * 应用初始化完成之后再进行页面加载渲染
@@ -18,6 +19,8 @@ async function initApplication() {
     namespace,
     overrides: overridesPreferences,
   });
+  // 覆盖偏好缓存里的旧标题(未登录=后台; 已登录过=站点名 + 英文简称)
+  updatePreferences({ app: { name: restoreSiteBrandFromCache() } });
 
   // 启动应用并挂载
   // vue应用主要逻辑及视图
