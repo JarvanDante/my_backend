@@ -41,7 +41,7 @@ describe('fileUploader', () => {
       expect.any(FormData),
       {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          'Content-Type': undefined,
         },
       },
     );
@@ -73,8 +73,8 @@ describe('fileUploader', () => {
       expect.any(FormData),
       {
         headers: {
-          'Content-Type': 'multipart/form-data',
           'Custom-Header': 'value',
+          'Content-Type': undefined,
         },
       },
     );

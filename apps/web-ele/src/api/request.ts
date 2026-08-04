@@ -67,6 +67,14 @@ function createRequestClient(baseURL: string, options?: RequestClientOptions) {
 
       config.headers.Authorization = formatToken(accessStore.accessToken);
       config.headers["Accept-Language"] = preferences.app.locale;
+      // FormData 必须让浏览器自动带 boundary; 清掉默认 application/json
+      if (typeof FormData !== "undefined" && config.data instanceof FormData) {
+        if (typeof config.headers.set === "function") {
+          config.headers.set("Content-Type", false);
+        } else {
+          delete (config.headers as any)["Content-Type"];
+        }
+      }
       return config;
     },
   });
