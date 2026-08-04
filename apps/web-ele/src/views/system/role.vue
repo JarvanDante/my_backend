@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { onMounted, reactive, ref } from "vue";
+import { nextTick, onMounted, reactive, ref } from "vue";
 
 import {
   ElButton,
@@ -11,21 +11,18 @@ import {
   ElInput,
   ElMessage,
   ElMessageBox,
-  ElOption,
-  ElSelect,
   ElSwitch,
   ElTable,
   ElTableColumn,
   ElTag,
+  ElTree,
 } from "element-plus";
 
 import {
-  addRolePermApi,
   createRoleApi,
   deleteRoleApi,
-  delRolePermApi,
+  getPermTreeApi,
   getRoleListApi,
-  getRolePermsApi,
   type SystemApi,
   updateRoleApi,
 } from "#/api/core/system";
@@ -79,16 +76,18 @@ async function handleSave() {
   saving.value = true;
   try {
     if (isEdit.value) {
+      const row = roles.value.find((r) => r.id === form.id);
       await updateRoleApi({
         id: form.id,
         name: form.name,
         remark: form.remark,
         status: form.status ? 1 : 0,
+        permissions: row?.permissions || "",
       });
       ElMessage.success("更新成功");
     } else {
       await createRoleApi({ name: form.name, code: form.code, remark: form.remark });
-      ElMessage.success("创建成功");
+      ElMessage.success("创建成功, 请配置该角色的菜单权限");
     }
     dialogVisible.value = false;
     fetchRoles();
@@ -98,56 +97,72 @@ async function handleSave() {
 }
 
 async function handleDelete(row: SystemApi.RoleItem) {
-  await ElMessageBox.confirm(
-    `确认删除角色「${row.name}」? 其 Casbin 权限策略将一并清除。`,
-    "提示",
-    { type: "warning" }
-  );
+  await ElMessageBox.confirm(`确认删除角色「${row.name}」?`, "提示", { type: "warning" });
   await deleteRoleApi(row.id);
   ElMessage.success("删除成功");
   fetchRoles();
 }
 
-// ---------- 权限配置 ----------
+// ---------- 权限配置(勾选菜单树) ----------
 const permDrawer = ref(false);
 const permRole = ref<SystemApi.RoleItem | null>(null);
-const perms = ref<SystemApi.PermItem[]>([]);
+const permTree = ref<SystemApi.PermNode[]>([]);
 const permLoading = ref(false);
-const newPerm = reactive({ path: "", method: "GET" });
-const methodOptions = ["GET", "POST", "PUT", "DELETE", "*"];
+const permSaving = ref(false);
+const treeRef = ref();
+const treeProps = { label: "name", children: "children" };
+
+// 有子节点的 id 集合(回显时只勾叶子, 父级自动半选)
+function collectParentIds(nodes: SystemApi.PermNode[], set: Set<number>) {
+  for (const n of nodes) {
+    if (n.children && n.children.length > 0) {
+      set.add(n.id);
+      collectParentIds(n.children, set);
+    }
+  }
+  return set;
+}
 
 async function openPerms(row: SystemApi.RoleItem) {
   permRole.value = row;
   permDrawer.value = true;
-  loadPerms();
-}
-
-async function loadPerms() {
-  if (!permRole.value) return;
   permLoading.value = true;
   try {
-    const res = await getRolePermsApi(permRole.value.code);
-    perms.value = res.list || [];
+    const res = await getPermTreeApi();
+    permTree.value = res.list || [];
+    await nextTick();
+    const saved = (row.permissions || "")
+      .split(",")
+      .map((s) => Number.parseInt(s.trim(), 10))
+      .filter((n) => !Number.isNaN(n) && n > 0);
+    const parents = collectParentIds(permTree.value, new Set<number>());
+    const leafChecked = saved.filter((id) => !parents.has(id));
+    treeRef.value?.setCheckedKeys(leafChecked);
   } finally {
     permLoading.value = false;
   }
 }
 
-async function handleAddPerm() {
-  if (!newPerm.path.startsWith("/")) {
-    ElMessage.warning("路径须以 / 开头, 如 /manage/merchants");
-    return;
+async function savePerms() {
+  if (!permRole.value) return;
+  const checked: number[] = treeRef.value?.getCheckedKeys() || [];
+  const half: number[] = treeRef.value?.getHalfCheckedKeys() || [];
+  const permissions = [...half, ...checked].sort((a, b) => a - b).join(",");
+  permSaving.value = true;
+  try {
+    await updateRoleApi({
+      id: permRole.value.id,
+      name: permRole.value.name,
+      remark: permRole.value.remark,
+      status: permRole.value.status,
+      permissions,
+    });
+    ElMessage.success("权限已保存(实时生效)");
+    permDrawer.value = false;
+    fetchRoles();
+  } finally {
+    permSaving.value = false;
   }
-  await addRolePermApi(permRole.value!.code, newPerm.path, newPerm.method);
-  ElMessage.success("授权成功(实时生效)");
-  newPerm.path = "";
-  loadPerms();
-}
-
-async function handleDelPerm(p: SystemApi.PermItem) {
-  await delRolePermApi(permRole.value!.code, p.path, p.method);
-  ElMessage.success("已移除");
-  loadPerms();
 }
 
 onMounted(fetchRoles);
@@ -159,7 +174,7 @@ onMounted(fetchRoles);
       <div class="mb-4 flex items-center">
         <span class="font-medium">角色列表</span>
         <span class="text-muted-foreground ml-2 text-xs">
-          superadmin 为系统保留超管, 拥有全部权限
+          superadmin 为系统保留超管, 拥有全部权限; 其余角色勾选菜单即分配「菜单+接口」权限
         </span>
         <div class="flex-1"></div>
         <ElButton type="primary" @click="openCreate">创建角色</ElButton>
@@ -182,7 +197,13 @@ onMounted(fetchRoles);
             </ElTag>
           </template>
         </ElTableColumn>
-        <ElTableColumn prop="remark" label="备注" min-width="160" show-overflow-tooltip />
+        <ElTableColumn label="已配权限数" width="100" align="center">
+          <template #default="{ row }">
+            <span v-if="row.code === 'superadmin'" class="text-muted-foreground text-xs">全部</span>
+            <span v-else>{{ (row.permissions || "").split(",").filter(Boolean).length }}</span>
+          </template>
+        </ElTableColumn>
+        <ElTableColumn prop="remark" label="备注" min-width="140" show-overflow-tooltip />
         <ElTableColumn label="操作" width="220" fixed="right">
           <template #default="{ row }">
             <template v-if="row.code !== 'superadmin'">
@@ -217,30 +238,37 @@ onMounted(fetchRoles);
       </template>
     </ElDialog>
 
-    <ElDrawer v-model="permDrawer" :title="`权限配置 — ${permRole?.name}(${permRole?.code})`" size="520px">
-      <div class="mb-3 flex items-center gap-2">
-        <ElInput
-          v-model="newPerm.path"
-          placeholder="/manage/merchants 或 /manage/sites/:id"
-          style="flex: 1"
-        />
-        <ElSelect v-model="newPerm.method" style="width: 100px">
-          <ElOption v-for="m in methodOptions" :key="m" :label="m" :value="m" />
-        </ElSelect>
-        <ElButton type="primary" @click="handleAddPerm">授权</ElButton>
-      </div>
+    <ElDrawer
+      v-model="permDrawer"
+      :title="`权限配置 — ${permRole?.name}(${permRole?.code})`"
+      size="440px"
+    >
       <div class="text-muted-foreground mb-3 text-xs">
-        路径支持 :id 通配(keyMatch2); 方法 * 表示放行全部方法; 增删实时生效, 无需重登。
+        勾选菜单即授予「菜单显示 + 该菜单下的接口权限」; 保存后实时生效, 该角色下管理员刷新页面即可看到新菜单。
       </div>
-      <ElTable v-loading="permLoading" :data="perms" border size="small">
-        <ElTableColumn prop="path" label="路径" min-width="240" />
-        <ElTableColumn prop="method" label="方法" width="90" align="center" />
-        <ElTableColumn label="操作" width="80" align="center">
-          <template #default="{ row }">
-            <ElButton link type="danger" @click="handleDelPerm(row)">移除</ElButton>
-          </template>
-        </ElTableColumn>
-      </ElTable>
+      <ElTree
+        ref="treeRef"
+        v-loading="permLoading"
+        :data="permTree"
+        :props="treeProps"
+        node-key="id"
+        show-checkbox
+        default-expand-all
+      >
+        <template #default="{ data }">
+          <span class="flex items-center gap-1">
+            <span>{{ data.name }}</span>
+            <ElTag v-if="data.isMenu === 0" size="small" type="warning">
+              {{ data.method }}
+            </ElTag>
+            <ElTag v-else-if="data.hideInMenu === 1" size="small" type="info">隐藏页</ElTag>
+          </span>
+        </template>
+      </ElTree>
+      <div class="mt-4 flex justify-end gap-2">
+        <ElButton @click="permDrawer = false">取消</ElButton>
+        <ElButton type="primary" :loading="permSaving" @click="savePerms">保存权限</ElButton>
+      </div>
     </ElDrawer>
   </div>
 </template>

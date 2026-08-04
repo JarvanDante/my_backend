@@ -7,11 +7,7 @@ export namespace SystemApi {
     code: string;
     remark: string;
     status: number;
-  }
-
-  export interface PermItem {
-    path: string;
-    method: string;
+    permissions: string; // 勾选的权限id列表, 逗号分隔
   }
 
   export interface AdminItem {
@@ -30,6 +26,40 @@ export namespace SystemApi {
     page: number;
     size: number;
   }
+
+  /** 菜单+接口权限树节点(isMenu: 1=菜单 0=接口权限) */
+  export interface PermNode {
+    id: number;
+    parentId: number;
+    name: string;
+    routeUrl: string;
+    component: string;
+    method: string;
+    icon: string;
+    isMenu: number;
+    hideInMenu: number;
+    affixTab: number;
+    activePath: string;
+    sort: number;
+    status: number;
+    children: PermNode[];
+  }
+
+  export interface PermInput {
+    id?: number;
+    parentId: number;
+    name: string;
+    routeUrl?: string;
+    component?: string;
+    method?: string;
+    icon?: string;
+    isMenu: number;
+    hideInMenu?: number;
+    affixTab?: number;
+    activePath?: string;
+    sort?: number;
+    status?: number;
+  }
 }
 
 // ---------- 角色 ----------
@@ -37,7 +67,12 @@ export async function getRoleListApi() {
   return requestClient.get<{ list: SystemApi.RoleItem[] }>("/roles");
 }
 
-export async function createRoleApi(p: { name: string; code: string; remark?: string }) {
+export async function createRoleApi(p: {
+  name: string;
+  code: string;
+  remark?: string;
+  permissions?: string;
+}) {
   return requestClient.post<{ id: number }>("/roles", p);
 }
 
@@ -46,6 +81,7 @@ export async function updateRoleApi(p: {
   name: string;
   remark?: string;
   status: number;
+  permissions?: string;
 }) {
   return requestClient.put(`/roles/${p.id}`, p);
 }
@@ -54,19 +90,21 @@ export async function deleteRoleApi(id: number) {
   return requestClient.delete(`/roles/${id}`);
 }
 
-// ---------- 角色权限 ----------
-export async function getRolePermsApi(code: string) {
-  return requestClient.get<{ list: SystemApi.PermItem[] }>(`/roles/${code}/perms`);
+// ---------- 菜单/接口权限树 ----------
+export async function getPermTreeApi() {
+  return requestClient.get<{ list: SystemApi.PermNode[] }>("/permissions");
 }
 
-export async function addRolePermApi(code: string, path: string, method: string) {
-  return requestClient.post(`/roles/${code}/perms`, { code, path, method });
+export async function createPermApi(p: SystemApi.PermInput) {
+  return requestClient.post<{ id: number }>("/permissions", p);
 }
 
-export async function delRolePermApi(code: string, path: string, method: string) {
-  return requestClient.delete(`/roles/${code}/perms`, {
-    data: { code, path, method },
-  });
+export async function updatePermApi(p: SystemApi.PermInput) {
+  return requestClient.put(`/permissions/${p.id}`, p);
+}
+
+export async function deletePermApi(id: number) {
+  return requestClient.delete(`/permissions/${id}`);
 }
 
 // ---------- 管理员 ----------
