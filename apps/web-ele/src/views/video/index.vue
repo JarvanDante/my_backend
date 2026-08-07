@@ -4,6 +4,8 @@ import { onMounted, reactive, ref } from "vue";
 import {
   ElButton,
   ElCard,
+  ElDescriptions,
+  ElDescriptionsItem,
   ElDialog,
   ElForm,
   ElFormItem,
@@ -108,6 +110,20 @@ function resetForm() {
   });
   videoPercent.value = 0;
   videoFileName.value = "";
+}
+
+const detailVisible = ref(false);
+const detail = ref<VideoApi.Item | null>(null);
+
+function openDetail(row: VideoApi.Item) {
+  detail.value = row;
+  detailVisible.value = true;
+}
+
+function openEditFromDetail() {
+  const row = detail.value;
+  detailVisible.value = false;
+  if (row) openEdit(row);
 }
 
 function openCreate() {
@@ -298,8 +314,9 @@ onMounted(loadList);
           </template>
         </ElTableColumn>
         <ElTableColumn prop="created_at" label="创建时间" min-width="160" />
-        <ElTableColumn label="操作" width="260" fixed="right">
+        <ElTableColumn label="操作" width="300" fixed="right">
           <template #default="{ row }">
+            <ElButton link type="primary" @click="openDetail(row)">详情</ElButton>
             <ElButton link type="primary" @click="openEdit(row)">编辑</ElButton>
             <ElButton
               v-if="row.status !== 1"
@@ -334,6 +351,90 @@ onMounted(loadList);
         />
       </div>
     </ElCard>
+
+    <ElDialog
+      v-model="detailVisible"
+      title="视频详情"
+      width="720px"
+      destroy-on-close
+      @closed="detail = null"
+    >
+      <div v-if="detail">
+        <div class="mb-4 overflow-hidden rounded bg-black">
+          <video
+            v-if="detail.source_url"
+            :key="detail.id"
+            class="max-h-[420px] w-full"
+            controls
+            preload="metadata"
+            playsinline
+            :poster="detail.cover_url || undefined"
+            :src="detail.source_url"
+          >
+            您的浏览器不支持视频播放
+          </video>
+          <div
+            v-else
+            class="text-muted-foreground flex h-48 items-center justify-center text-sm"
+          >
+            暂无视频资源
+          </div>
+        </div>
+
+        <ElDescriptions :column="2" border>
+          <ElDescriptionsItem label="ID">{{ detail.id }}</ElDescriptionsItem>
+          <ElDescriptionsItem label="状态">
+            <ElTag
+              :type="statusTag[detail.status]?.type || 'info'"
+              size="small"
+            >
+              {{ statusTag[detail.status]?.t || detail.status }}
+            </ElTag>
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="标题" :span="2">
+            {{ detail.title }}
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="简介" :span="2">
+            {{ detail.description || "-" }}
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="时长">
+            {{ formatDuration(detail.duration) }}
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="排序">{{ detail.sort }}</ElDescriptionsItem>
+          <ElDescriptionsItem label="创建时间">
+            {{ detail.created_at || "-" }}
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="更新时间">
+            {{ detail.updated_at || "-" }}
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="封面" :span="2">
+            <ElImage
+              v-if="detail.cover_url"
+              :src="detail.cover_url"
+              fit="cover"
+              class="h-20 w-20 rounded"
+              :preview-src-list="[detail.cover_url]"
+            />
+            <span v-else>-</span>
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="视频地址" :span="2">
+            <a
+              v-if="detail.source_url"
+              :href="detail.source_url"
+              target="_blank"
+              class="text-primary text-xs break-all"
+            >
+              {{ detail.source_url }}
+            </a>
+            <span v-else>-</span>
+          </ElDescriptionsItem>
+        </ElDescriptions>
+      </div>
+      <template #footer>
+        <ElButton @click="detailVisible = false">关闭</ElButton>
+        <ElButton type="primary" @click="openEditFromDetail">编辑</ElButton>
+      </template>
+    </ElDialog>
 
     <ElDialog
       v-model="dialog"
