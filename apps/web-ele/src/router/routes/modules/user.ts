@@ -5,7 +5,15 @@ const routes: RouteRecordRaw[] = [
     meta: { icon: "lucide:users", order: 10, title: "用户管理" },
     name: "UserManage",
     path: "/user",
-    component: () => import("#/views/user/index.vue"),
+    redirect: "/user/list",
+    children: [
+      {
+        name: "UserList",
+        path: "list",
+        component: () => import("#/views/user/index.vue"),
+        meta: { icon: "lucide:list", title: "用户列表" },
+      },
+    ],
   },
 ];
 
