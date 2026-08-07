@@ -18,6 +18,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import("#/views/system/admin.vue"),
         meta: { icon: "lucide:users", title: "管理员" },
       },
+      {
+        name: "SystemPermission",
+        path: "permission",
+        component: () => import("#/views/system/permission.vue"),
+        meta: { icon: "lucide:list-tree", title: "菜单权限" },
+      },
     ],
   },
 ];

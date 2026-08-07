@@ -19,8 +19,14 @@ async function initApplication() {
     namespace,
     overrides: overridesPreferences,
   });
-  // 覆盖偏好缓存里的旧标题(未登录=后台; 已登录过=站点名 + 英文简称)
-  updatePreferences({ app: { name: restoreSiteBrandFromCache() } });
+  // 强制 backend 动态菜单: 偏好缓存里的旧 accessMode=frontend 会盖掉 overrides, 必须再写回
+  // 同时覆盖偏好缓存里的旧标题(未登录=后台; 已登录过=站点名 + 英文简称)
+  updatePreferences({
+    app: {
+      accessMode: "backend",
+      name: restoreSiteBrandFromCache(),
+    },
+  });
 
   // 启动应用并挂载
   // vue应用主要逻辑及视图

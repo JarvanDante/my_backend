@@ -157,7 +157,7 @@ async function savePerms() {
       status: permRole.value.status,
       permissions,
     });
-    ElMessage.success("权限已保存(实时生效)");
+    ElMessage.success("权限已保存, 该角色下管理员重新登录后生效");
     permDrawer.value = false;
     fetchRoles();
   } finally {

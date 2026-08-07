@@ -10,7 +10,7 @@ import { resetAllStores, useAccessStore, useUserStore } from "@vben/stores";
 import { ElNotification } from "element-plus";
 import { defineStore } from "pinia";
 
-import { getAccessCodesApi, getUserInfoApi, loginApi, logoutApi } from "#/api";
+import { getUserInfoApi, loginApi, logoutApi } from "#/api";
 import { $t } from "#/locales";
 import { applySiteBrand, clearSiteBrand } from "#/utils/site-brand";
 
@@ -40,17 +40,15 @@ export const useAuthStore = defineStore("auth", () => {
       if (accessToken) {
         // 将 accessToken 存储到 accessStore 中
         accessStore.setAccessToken(accessToken);
+        // 切换账号必须重新拉 /auth/menus, 否则会沿用上一用户的动态路由
+        accessStore.setIsAccessChecked(false);
+        accessStore.setAccessMenus([]);
+        accessStore.setAccessRoutes([]);
 
-        // 获取用户信息并存储到 accessStore 中
-        const [fetchUserInfoResult, accessCodes] = await Promise.all([
-          fetchUserInfo(),
-          // getAccessCodesApi(),
-        ]);
-
-        userInfo = fetchUserInfoResult;
-
+        // 菜单权限由 /auth/menus 下发; 按钮级 accessCodes 暂未接入
+        userInfo = await fetchUserInfo();
         userStore.setUserInfo(userInfo);
-        accessStore.setAccessCodes(accessCodes ?? []);
+        accessStore.setAccessCodes([]);
 
         if (accessStore.loginExpired) {
           accessStore.setLoginExpired(false);
@@ -82,16 +80,24 @@ export const useAuthStore = defineStore("auth", () => {
   }
 
   async function logout(redirect: boolean = true) {
-    try {
-      await logoutApi();
-    } catch {
-      // 不做任何处理
+    // 已在登录页且无 token: 本地已登出, 勿再打 logout 接口
+    const token = accessStore.accessToken;
+    if (token) {
+      try {
+        await logoutApi();
+      } catch {
+        // token 已失效等场景静默处理
+      }
     }
     clearSiteBrand();
     resetAllStores();
     accessStore.setLoginExpired(false);
 
-    // 回登录页带上当前路由地址
+    // 已在登录页时不要再 replace, 避免路由抖动引发重复请求
+    if (router.currentRoute.value.path === LOGIN_PATH) {
+      return;
+    }
+
     await router.replace({
       path: LOGIN_PATH,
       query: redirect
