@@ -29,3 +29,33 @@ export function getRechargeTrendApi(days = 7) {
 export function getChannelsApi() {
   return requestClient.get<{ list: StatsApi.ChannelItem[] }>("/stats/channels");
 }
+
+// ---------------- 扩展维度(分析页图表化) ----------------
+export namespace StatsExtApi {
+  export interface HourDistItem { hour: number; registers: number; orders: number }
+  export interface DeviceStatItem { device_type: string; count: number }
+  export interface ContentStatItem {
+    media_type: number;
+    type_name: string;
+    online: number;
+    pending: number;
+    offline: number;
+    views: number;
+    buys: number;
+    buy_amount: number;
+  }
+  export interface BalanceSceneItem { scene: string; income: number; expense: number }
+}
+
+export function getHourDistApi(days = 30) {
+  return requestClient.get<{ list: StatsExtApi.HourDistItem[] }>("/stats/hour-dist", { params: { days } });
+}
+export function getDeviceStatsApi() {
+  return requestClient.get<{ list: StatsExtApi.DeviceStatItem[] }>("/stats/devices");
+}
+export function getContentStatsApi() {
+  return requestClient.get<{ list: StatsExtApi.ContentStatItem[] }>("/stats/content");
+}
+export function getBalanceScenesApi(days = 30) {
+  return requestClient.get<{ list: StatsExtApi.BalanceSceneItem[] }>("/stats/balance-scenes", { params: { days } });
+}
