@@ -108,6 +108,19 @@ export async function setUserDisableApi(id: number, op: "disable" | "enable", re
   return requestClient.post(`/users/${id}/disable`, { id, op, reason });
 }
 
+/** 批量冻结/解冻, 返回实际变更人数 */
+export async function batchDisableUsersApi(
+  ids: number[],
+  op: "disable" | "enable",
+  reason = "",
+) {
+  return requestClient.post<{ affected: number }>("/users/batch-disable", {
+    ids,
+    op,
+    reason,
+  });
+}
+
 export async function setUserGroupApi(
   id: number,
   group_id: number,

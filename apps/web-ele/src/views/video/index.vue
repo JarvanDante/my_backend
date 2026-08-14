@@ -294,6 +294,7 @@ onMounted(loadList);
               :src="row.cover_url"
               fit="cover"
               class="h-14 w-14 rounded"
+              preview-teleported
               :preview-src-list="[row.cover_url]"
             />
             <span v-else class="text-muted-foreground text-xs">无</span>
@@ -413,6 +414,7 @@ onMounted(loadList);
               :src="detail.cover_url"
               fit="cover"
               class="h-20 w-20 rounded"
+              preview-teleported
               :preview-src-list="[detail.cover_url]"
             />
             <span v-else>-</span>
