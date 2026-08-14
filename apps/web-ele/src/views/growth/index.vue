@@ -4,21 +4,24 @@ import { onMounted, reactive, ref } from "vue";
 import {
   ElButton,
   ElCard,
+  ElCheckbox,
+  ElCheckboxGroup,
   ElDialog,
   ElForm,
   ElFormItem,
+  ElImage,
   ElInput,
   ElInputNumber,
   ElMessage,
   ElMessageBox,
-  ElPagination,
-  ElProgress,
-  ElSwitch,
+  ElOption,
+  ElRadio,
+  ElRadioGroup,
+  ElSelect,
   ElTable,
   ElTableColumn,
-  ElTabPane,
-  ElTabs,
   ElTag,
+  ElUpload,
 } from "element-plus";
 
 import {
@@ -28,119 +31,191 @@ import {
   type BkGroupApi,
   updateGroupApi,
 } from "#/api/core/bkgroup";
-import {
-  createTaskApi,
-  deleteTaskApi,
-  getSignStatsApi,
-  getTaskListApi,
-  getTaskLogListApi,
-  type GrowthApi,
-  updateTaskApi,
-} from "#/api/core/growth";
+import { uploadMediaApi } from "#/api/core/media";
 
 defineOptions({ name: "GrowthManage" });
 
-const activeTab = ref("groups");
+const levelOpts = [
+  { value: 1, label: "普通" },
+  { value: 2, label: "普通+暗网" },
+];
+const promotionOpts = [
+  { value: 0, label: "正常价格" },
+  { value: 1, label: "新人专享" },
+];
+const rightsOpts = [
+  { value: "anwang", label: "暗网无限看" },
+  { value: "vip_post", label: "VIP帖子无限看" },
+  { value: "vip_movie", label: "VIP视频无限看" },
+  { value: "vip_cartoon", label: "VIP动漫无限看" },
+  { value: "vip_comics", label: "VIP漫画无限看" },
+  { value: "vip_line", label: "高速线路" },
+  { value: "comment", label: "评论吐槽" },
+  { value: "nickname", label: "修改昵称" },
+  { value: "game", label: "解锁游戏" },
+  { value: "chat", label: "解锁陪聊" },
+  { value: "yuanjiao", label: "解锁援交" },
+  { value: "no_ad", label: "免广告" },
+  { value: "member_discount", label: "购片折扣" },
+  { value: "gift_coin", label: "赠送金币" },
+];
 
-// ---------- 用户组 ----------
+function parseRights(raw: string): string[] {
+  if (!raw) return [];
+  try {
+    const v = JSON.parse(raw);
+    if (Array.isArray(v)) return v.map(String);
+    if (v && typeof v === "object") {
+      return Object.keys(v).filter((k) => Boolean((v as Record<string, unknown>)[k]));
+    }
+  } catch {
+    /* ignore */
+  }
+  return [];
+}
+
+function emptyGroup() {
+  return {
+    id: 0,
+    name: "",
+    title_heat: "",
+    title_description: "",
+    title_picture: "",
+    img: "",
+    level: 1,
+    promotion_type: 0,
+    price: 0,
+    old_price: 0,
+    rate: 100,
+    day_num: 30,
+    gift_num: 0,
+    download_num: 0,
+    day_tips: "",
+    price_tips: "",
+    rightsKeys: [] as string[],
+    remark: "",
+    sort: 0,
+    status: 1,
+  };
+}
+
+const searchName = ref("");
 const groups = ref<BkGroupApi.GroupItem[]>([]);
 const gLoading = ref(false);
+const selectedIds = ref<number[]>([]);
 async function loadGroups() {
   gLoading.value = true;
   try {
-    const res = await getGroupListApi();
+    const res = await getGroupListApi(searchName.value.trim());
     groups.value = res.list || [];
   } finally {
     gLoading.value = false;
   }
 }
+function resetSearch() {
+  searchName.value = "";
+  loadGroups();
+}
+function onSelectionChange(rows: BkGroupApi.GroupItem[]) {
+  selectedIds.value = rows.map((r) => r.id);
+}
+
 const gDialog = ref(false);
 const gEdit = ref(false);
-const gForm = reactive<any>({ id: 0, name: "", rate: 100, rights: "{}", remark: "", sort: 0, status: true });
+const gForm = reactive(emptyGroup());
+const imgUploading = ref(false);
+const titlePicUploading = ref(false);
+
 function openGCreate() {
   gEdit.value = false;
-  Object.assign(gForm, { id: 0, name: "", rate: 100, rights: "{}", remark: "", sort: 0, status: true });
+  Object.assign(gForm, emptyGroup());
   gDialog.value = true;
 }
 function openGEdit(row: BkGroupApi.GroupItem) {
   gEdit.value = true;
-  Object.assign(gForm, { ...row, status: row.status === 1 });
+  Object.assign(gForm, emptyGroup(), {
+    ...row,
+    rightsKeys: parseRights(row.rights),
+    status: row.status === 1 ? 1 : 0,
+  });
   gDialog.value = true;
 }
+function toPayload() {
+  return {
+    id: gForm.id,
+    name: gForm.name,
+    title_heat: gForm.title_heat,
+    title_description: gForm.title_description,
+    title_picture: gForm.title_picture,
+    img: gForm.img,
+    level: gForm.level,
+    promotion_type: gForm.promotion_type,
+    price: Number(gForm.price) || 0,
+    old_price: Number(gForm.old_price) || 0,
+    rate: gForm.rate,
+    day_num: gForm.day_num,
+    gift_num: gForm.gift_num,
+    download_num: gForm.download_num,
+    day_tips: gForm.day_tips,
+    price_tips: gForm.price_tips,
+    rights: JSON.stringify(gForm.rightsKeys || []),
+    remark: gForm.remark,
+    sort: gForm.sort,
+    status: gForm.status,
+  };
+}
 async function saveG() {
-  const p = { ...gForm, status: gForm.status ? 1 : 0 };
-  if (gEdit.value) await updateGroupApi(p);
+  if (!gForm.name) {
+    ElMessage.warning("请输入名称");
+    return;
+  }
+  if (!gForm.day_num || gForm.day_num < 1) {
+    ElMessage.warning("可用天数必须大于0");
+    return;
+  }
+  const p = toPayload();
+  if (gEdit.value) await updateGroupApi({ ...p, id: gForm.id });
   else await createGroupApi(p);
-  ElMessage.success("保存成功(更新会同步组内用户快照)");
+  ElMessage.success("保存成功");
   gDialog.value = false;
   loadGroups();
 }
 async function delG(row: BkGroupApi.GroupItem) {
-  await ElMessageBox.confirm(`删除用户组「${row.name}」?组内有用户会被拒绝。`, "提示", { type: "warning" });
+  await ElMessageBox.confirm(`确定删除「${row.name}」? 组内有用户会被拒绝。`, "提示", {
+    type: "warning",
+  });
   await deleteGroupApi(row.id);
   ElMessage.success("已删除");
   loadGroups();
 }
-
-// ---------- 任务 ----------
-const tasks = ref<GrowthApi.TaskItem[]>([]);
-const tLoading = ref(false);
-async function loadTasks() {
-  tLoading.value = true;
-  try {
-    const res = await getTaskListApi();
-    tasks.value = res.list || [];
-  } finally {
-    tLoading.value = false;
+async function delSelected() {
+  if (!selectedIds.value.length) {
+    ElMessage.warning("请选择需要的数据");
+    return;
   }
-}
-const tDialog = ref(false);
-const tEdit = ref(false);
-const tForm = reactive<any>({ id: 0, name: "", type: "", description: "", max_num: 1, reward: 10, status: true, sort: 0 });
-function openTCreate() {
-  tEdit.value = false;
-  Object.assign(tForm, { id: 0, name: "", type: "", description: "", max_num: 1, reward: 10, status: true, sort: 0 });
-  tDialog.value = true;
-}
-function openTEdit(row: GrowthApi.TaskItem) {
-  tEdit.value = true;
-  Object.assign(tForm, { ...row, status: row.status === 1 });
-  tDialog.value = true;
-}
-async function saveT() {
-  const p = { ...tForm, status: tForm.status ? 1 : 0 };
-  if (tEdit.value) await updateTaskApi(p);
-  else await createTaskApi(p);
-  ElMessage.success("保存成功");
-  tDialog.value = false;
-  loadTasks();
-}
-async function delT(row: GrowthApi.TaskItem) {
-  await ElMessageBox.confirm(`删除任务「${row.name}」?`, "提示", { type: "warning" });
-  await deleteTaskApi(row.id);
+  await ElMessageBox.confirm(`确定删除选中的 ${selectedIds.value.length} 条?`, "提示", {
+    type: "warning",
+  });
+  for (const id of selectedIds.value) {
+    await deleteGroupApi(id);
+  }
   ElMessage.success("已删除");
-  loadTasks();
+  loadGroups();
 }
 
-// ---------- 签到统计 ----------
-const stats = ref<GrowthApi.SignStats | null>(null);
-const sLoading = ref(false);
-async function loadStats() {
-  sLoading.value = true;
+async function onImgChange(file: any, field: "img" | "title_picture") {
+  const raw: File | undefined = file?.raw;
+  if (!raw) return false;
+  const uploading = field === "img" ? imgUploading : titlePicUploading;
+  uploading.value = true;
   try {
-    stats.value = await getSignStatsApi(0);
+    const res = await uploadMediaApi(raw, "cover");
+    gForm[field] = res.url;
+    ElMessage.success("上传成功");
   } finally {
-    sLoading.value = false;
+    uploading.value = false;
   }
-}
-function maxCount() {
-  if (!stats.value || !stats.value.days.length) return 1;
-  return Math.max(...stats.value.days.map((d) => d.count));
-}
-
-function onTab(name: string | number) {
-  if (name === "tasks" && !tasks.value.length) loadTasks();
-  if (name === "sign") loadStats();
+  return false;
 }
 
 onMounted(loadGroups);
@@ -149,113 +224,229 @@ onMounted(loadGroups);
 <template>
   <div class="p-5">
     <ElCard shadow="never">
-      <ElTabs v-model="activeTab" @tab-change="onTab">
-        <!-- 用户组 -->
-        <ElTabPane label="用户组" name="groups">
-          <div class="mb-3">
-            <ElButton type="primary" @click="openGCreate">新建用户组</ElButton>
+      <ElForm :inline="true" class="mb-2" @submit.prevent="loadGroups">
+        <ElFormItem label="名称:">
+          <ElInput
+            v-model="searchName"
+            clearable
+            placeholder="输入名称"
+            style="width: 220px"
+            @keyup.enter="loadGroups"
+          />
+        </ElFormItem>
+        <ElFormItem>
+          <ElButton type="primary" native-type="submit">搜索</ElButton>
+          <ElButton @click="resetSearch">重置</ElButton>
+        </ElFormItem>
+      </ElForm>
+      <div class="mb-3 flex gap-2">
+            <ElButton type="primary" @click="openGCreate">添加</ElButton>
+            <ElButton type="danger" @click="delSelected">删除</ElButton>
           </div>
-          <ElTable v-loading="gLoading" :data="groups" border stripe>
-            <ElTableColumn prop="id" label="ID" width="70" />
-            <ElTableColumn prop="name" label="组名" min-width="140" />
-            <ElTableColumn prop="rate" label="折扣(%)" width="100" align="right" />
-            <ElTableColumn prop="sort" label="排序" width="70" align="center" />
-            <ElTableColumn label="状态" width="80" align="center">
+          <ElTable
+            v-loading="gLoading"
+            :data="groups"
+            border
+            stripe
+            size="small"
+            @selection-change="onSelectionChange"
+          >
+            <ElTableColumn type="selection" width="42" align="center" />
+            <ElTableColumn prop="id" label="ID" width="70" align="center" />
+            <ElTableColumn prop="name" label="名称" min-width="140" align="center" />
+            <ElTableColumn label="会员头衔" width="90" align="center">
               <template #default="{ row }">
-                <ElTag :type="row.status === 1 ? 'success' : 'info'">{{ row.status === 1 ? "启用" : "停用" }}</ElTag>
+                {{ row.title_heat?.trim() ? row.title_heat : "学徒" }}
               </template>
             </ElTableColumn>
-            <ElTableColumn prop="remark" label="备注" min-width="140" show-overflow-tooltip />
-            <ElTableColumn label="操作" width="140" fixed="right">
+            <ElTableColumn label="封面" width="70" align="center">
+              <template #default="{ row }">
+                <ElImage
+                  v-if="row.img"
+                  :src="row.img"
+                  fit="contain"
+                  class="h-6 w-8"
+                  preview-teleported
+                  :preview-src-list="[row.img]"
+                />
+                <span v-else>-</span>
+              </template>
+            </ElTableColumn>
+            <ElTableColumn prop="level_text" label="等级" min-width="110" align="center" />
+            <ElTableColumn prop="price" label="价格" width="80" align="center" />
+            <ElTableColumn prop="old_price" label="原价" width="80" align="center" />
+            <ElTableColumn prop="sort" label="排序" width="70" align="center" />
+            <ElTableColumn prop="day_num" label="可用天数" width="90" align="center" />
+            <ElTableColumn prop="gift_num" label="赠送金币" width="90" align="center" />
+            <ElTableColumn prop="download_num" label="下载次数" width="90" align="center" />
+            <ElTableColumn prop="rate" label="购片折扣" width="90" align="center" />
+            <ElTableColumn prop="promotion_type_text" label="促销类型" width="100" align="center" />
+            <ElTableColumn label="是否禁用" width="90" align="center">
+              <template #default="{ row }">
+                <ElTag :type="row.status === 1 ? 'success' : 'info'" size="small">
+                  {{ row.is_disabled_text || (row.status === 1 ? "正常" : "禁用") }}
+                </ElTag>
+              </template>
+            </ElTableColumn>
+            <ElTableColumn prop="updated_at" label="更新时间" width="120" align="center" />
+            <ElTableColumn label="操作" width="140" fixed="right" align="center">
               <template #default="{ row }">
                 <ElButton link type="primary" @click="openGEdit(row)">编辑</ElButton>
                 <ElButton link type="danger" @click="delG(row)">删除</ElButton>
               </template>
             </ElTableColumn>
           </ElTable>
-        </ElTabPane>
-
-        <!-- 任务 -->
-        <ElTabPane label="任务配置" name="tasks">
-          <div class="mb-3">
-            <ElButton type="primary" @click="openTCreate">新建任务</ElButton>
-          </div>
-          <ElTable v-loading="tLoading" :data="tasks" border stripe>
-            <ElTableColumn prop="id" label="ID" width="70" />
-            <ElTableColumn prop="name" label="任务名" min-width="140" />
-            <ElTableColumn prop="type" label="类型" width="120" />
-            <ElTableColumn prop="max_num" label="单日上限" width="90" align="right" />
-            <ElTableColumn prop="reward" label="奖励积分" width="90" align="right" />
-            <ElTableColumn prop="sort" label="排序" width="70" align="center" />
-            <ElTableColumn label="状态" width="80" align="center">
-              <template #default="{ row }">
-                <ElTag :type="row.status === 1 ? 'success' : 'info'">{{ row.status === 1 ? "上架" : "下线" }}</ElTag>
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="操作" width="140" fixed="right">
-              <template #default="{ row }">
-                <ElButton link type="primary" @click="openTEdit(row)">编辑</ElButton>
-                <ElButton link type="danger" @click="delT(row)">删除</ElButton>
-              </template>
-            </ElTableColumn>
-          </ElTable>
-        </ElTabPane>
-
-        <!-- 签到统计 -->
-        <ElTabPane label="签到统计" name="sign">
-          <div v-loading="sLoading">
-            <div v-if="stats" class="mb-4 flex gap-8">
-              <div>本月签到用户数: <b>{{ stats.user_count }}</b></div>
-              <div>总签到人次: <b>{{ stats.sign_count }}</b></div>
-              <div>归属月: <b>{{ stats.year_month }}</b></div>
-            </div>
-            <div v-if="stats && stats.days.length" class="space-y-2">
-              <div v-for="d in stats.days" :key="d.day" class="flex items-center gap-3">
-                <span class="w-12 text-right text-sm">{{ d.day }}号</span>
-                <ElProgress
-                  :percentage="Math.round((d.count / maxCount()) * 100)"
-                  :stroke-width="14"
-                  style="flex: 1"
-                  :format="() => d.count + ' 人'"
-                />
-              </div>
-            </div>
-            <div v-else-if="stats" class="text-muted-foreground py-6 text-center">本月暂无签到数据</div>
-          </div>
-        </ElTabPane>
-      </ElTabs>
     </ElCard>
 
-    <!-- 用户组弹窗 -->
-    <ElDialog v-model="gDialog" :title="gEdit ? '编辑用户组' : '新建用户组'" width="440px">
-      <ElForm label-width="90px">
-        <ElFormItem label="组名"><ElInput v-model="gForm.name" /></ElFormItem>
-        <ElFormItem label="折扣(%)"><ElInputNumber v-model="gForm.rate" :min="0" :max="100" /></ElFormItem>
-        <ElFormItem label="排序"><ElInputNumber v-model="gForm.sort" :min="0" /></ElFormItem>
-        <ElFormItem label="权益JSON"><ElInput v-model="gForm.rights" type="textarea" :rows="2" /></ElFormItem>
-        <ElFormItem label="备注"><ElInput v-model="gForm.remark" /></ElFormItem>
-        <ElFormItem label="启用"><ElSwitch v-model="gForm.status" /></ElFormItem>
+    <ElDialog
+      v-model="gDialog"
+      :title="gEdit ? '编辑会员等级' : '添加会员等级'"
+      width="720px"
+      top="5vh"
+    >
+      <ElForm label-width="140px">
+        <ElFormItem label="名称" required>
+          <ElInput v-model="gForm.name" placeholder="请输入名称" />
+        </ElFormItem>
+        <ElFormItem label="会员头衔">
+          <ElInput
+            v-model="gForm.title_heat"
+            maxlength="5"
+            show-word-limit
+            placeholder="未填写时默认为学徒"
+          />
+        </ElFormItem>
+        <ElFormItem label="头部会员卡描述">
+          <ElInput
+            v-model="gForm.title_description"
+            maxlength="21"
+            show-word-limit
+            placeholder="请输入头部会员卡描述"
+          />
+        </ElFormItem>
+        <ElFormItem label="等级" required>
+          <ElSelect v-model="gForm.level" class="w-full">
+            <ElOption
+              v-for="o in levelOpts"
+              :key="o.value"
+              :label="`${o.value} | ${o.label}`"
+              :value="o.value"
+            />
+          </ElSelect>
+        </ElFormItem>
+        <ElFormItem label="促销类型" required>
+          <ElSelect v-model="gForm.promotion_type" class="w-full">
+            <ElOption
+              v-for="o in promotionOpts"
+              :key="o.value"
+              :label="o.label"
+              :value="o.value"
+            />
+          </ElSelect>
+        </ElFormItem>
+        <ElFormItem label="价格" required>
+          <ElInputNumber v-model="gForm.price" :min="0" :precision="2" class="w-full" />
+        </ElFormItem>
+        <ElFormItem label="原价" required>
+          <ElInputNumber v-model="gForm.old_price" :min="0" :precision="2" class="w-full" />
+        </ElFormItem>
+        <ElFormItem label="购片折扣" required>
+          <ElInputNumber v-model="gForm.rate" :min="-2" :max="100" class="w-full" />
+          <div class="text-muted-foreground mt-1 text-xs leading-5">
+            1. 购买金币视频或金币帖子的折扣, 帖子折扣实际无效<br>
+            2. 填写 -1 表示金币视频免费<br>
+            3. 填写 -2 表示金币视频和金币帖子免费
+          </div>
+        </ElFormItem>
+        <ElFormItem label="可用天数" required>
+          <ElInputNumber v-model="gForm.day_num" :min="1" class="w-full" />
+        </ElFormItem>
+        <ElFormItem label="赠送金币" required>
+          <ElInputNumber v-model="gForm.gift_num" :min="0" class="w-full" />
+        </ElFormItem>
+        <ElFormItem label="下载次数" required>
+          <ElInputNumber v-model="gForm.download_num" :min="0" class="w-full" />
+        </ElFormItem>
+        <ElFormItem label="天数提示">
+          <ElInput v-model="gForm.day_tips" placeholder="请输入天数提示" />
+        </ElFormItem>
+        <ElFormItem label="价格提示">
+          <ElInput v-model="gForm.price_tips" placeholder="请输入价格提示" />
+        </ElFormItem>
+        <ElFormItem label="排序" required>
+          <ElInputNumber v-model="gForm.sort" :min="0" class="w-full" />
+        </ElFormItem>
+        <ElFormItem label="封面" required>
+          <div class="flex items-start gap-3">
+            <ElImage
+              v-if="gForm.img"
+              :src="gForm.img"
+              fit="contain"
+              class="h-20 w-28 rounded border"
+            />
+            <ElUpload
+              :show-file-list="false"
+              accept="image/*"
+              :disabled="imgUploading"
+              :before-upload="() => false"
+              :on-change="(f: any) => onImgChange(f, 'img')"
+            >
+              <ElButton :loading="imgUploading">
+                {{ gForm.img ? "更换封面" : "上传封面" }}
+              </ElButton>
+            </ElUpload>
+          </div>
+        </ElFormItem>
+        <ElFormItem label="头衔背景图">
+          <div class="flex items-start gap-3">
+            <ElImage
+              v-if="gForm.title_picture"
+              :src="gForm.title_picture"
+              fit="contain"
+              class="h-20 w-28 rounded border"
+            />
+            <ElUpload
+              :show-file-list="false"
+              accept="image/*"
+              :disabled="titlePicUploading"
+              :before-upload="() => false"
+              :on-change="(f: any) => onImgChange(f, 'title_picture')"
+            >
+              <ElButton :loading="titlePicUploading">
+                {{ gForm.title_picture ? "更换图片" : "上传图片" }}
+              </ElButton>
+            </ElUpload>
+          </div>
+        </ElFormItem>
+        <ElFormItem label="描述">
+          <ElInput
+            v-model="gForm.remark"
+            type="textarea"
+            :rows="2"
+            placeholder="建议最多 20-25 个字"
+          />
+        </ElFormItem>
+        <ElFormItem label="是否禁用" required>
+          <ElRadioGroup v-model="gForm.status">
+            <ElRadio :value="1">否</ElRadio>
+            <ElRadio :value="0">是</ElRadio>
+          </ElRadioGroup>
+        </ElFormItem>
+        <ElFormItem label="会员权益" required>
+          <ElCheckboxGroup v-model="gForm.rightsKeys">
+            <ElCheckbox
+              v-for="o in rightsOpts"
+              :key="o.value"
+              :value="o.value"
+            >
+              {{ o.value }} | {{ o.label }}
+            </ElCheckbox>
+          </ElCheckboxGroup>
+        </ElFormItem>
       </ElForm>
       <template #footer>
         <ElButton @click="gDialog = false">取消</ElButton>
-        <ElButton type="primary" @click="saveG">保存</ElButton>
-      </template>
-    </ElDialog>
-
-    <!-- 任务弹窗 -->
-    <ElDialog v-model="tDialog" :title="tEdit ? '编辑任务' : '新建任务'" width="440px">
-      <ElForm label-width="90px">
-        <ElFormItem label="任务名"><ElInput v-model="tForm.name" /></ElFormItem>
-        <ElFormItem label="类型"><ElInput v-model="tForm.type" placeholder="如 watch/share" /></ElFormItem>
-        <ElFormItem label="描述"><ElInput v-model="tForm.description" /></ElFormItem>
-        <ElFormItem label="单日上限"><ElInputNumber v-model="tForm.max_num" :min="1" /></ElFormItem>
-        <ElFormItem label="奖励积分"><ElInputNumber v-model="tForm.reward" :min="0" :precision="2" /></ElFormItem>
-        <ElFormItem label="排序"><ElInputNumber v-model="tForm.sort" :min="0" /></ElFormItem>
-        <ElFormItem label="上架"><ElSwitch v-model="tForm.status" /></ElFormItem>
-      </ElForm>
-      <template #footer>
-        <ElButton @click="tDialog = false">取消</ElButton>
-        <ElButton type="primary" @click="saveT">保存</ElButton>
+        <ElButton type="primary" @click="saveG">立即提交</ElButton>
       </template>
     </ElDialog>
   </div>

@@ -11,7 +11,7 @@
 |---|---|---|---|
 | 数据概览 | 分析页 | `views/dashboard/analytics/index.vue` | `api/core/stats.ts` |
 | 用户管理 | 用户列表 | `views/user/index.vue` | `api/core/bkuser.ts` |
-| | 用户组与成长 | `views/growth/index.vue` | `api/core/growth.ts` |
+| | 会员等级 | `views/growth/index.vue` | `api/core/bkgroup.ts` |
 | | 站内消息 | `views/user/message.vue` | `api/core/message.ts` |
 | 视频管理 | 视频列表 | `views/video/index.vue` | `api/core/video.ts` |
 | 漫画管理 | 漫画列表 | `views/content/comics.vue` | `api/core/comics.ts` |
