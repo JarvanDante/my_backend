@@ -22,6 +22,11 @@ export default defineConfig(async () => {
             target: "http://host.docker.internal:8000",
             ws: true,
           },
+          // 内置静态资源(默认头像包等)
+          "/static": {
+            changeOrigin: true,
+            target: "http://host.docker.internal:8000",
+          },
         },
       },
     },

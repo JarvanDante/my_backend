@@ -28,6 +28,7 @@ import QRCode from "qrcode";
 
 import {
   adjustBalanceApi,
+  batchDisableUsersApi,
   getBalanceLogsApi,
   getUserDetailApi,
   getUserListApi,
@@ -62,13 +63,10 @@ const searchForm = reactive({
   group_id: undefined as number | undefined,
   is_up: undefined as number | undefined,
   is_valid: undefined as number | undefined,
-  has_buy: undefined as number | undefined,
   status: undefined as number | undefined,
   device_type: undefined as string | undefined,
   start_time: undefined as string | undefined,
   end_time: undefined as string | undefined,
-  min_login_num: undefined as number | undefined,
-  max_login_num: undefined as number | undefined,
   user_id: "" as string,
   username: "",
   parent_id: "" as string,
@@ -144,13 +142,10 @@ async function fetchList() {
       group_id: searchForm.group_id || undefined,
       is_up: mapYesNoToApi(searchForm.is_up),
       is_valid: mapYesNoToApi(searchForm.is_valid),
-      has_buy: mapYesNoToApi(searchForm.has_buy),
       status: mapStatusToApi(searchForm.status),
       device_type: searchForm.device_type || undefined,
       start_date: toYmd(searchForm.start_time || undefined),
       end_date: toYmd(searchForm.end_time || undefined),
-      min_login_num: searchForm.min_login_num || undefined,
-      max_login_num: searchForm.max_login_num || undefined,
       page: pagination.current,
       size: pagination.pageSize,
     });
@@ -169,13 +164,10 @@ function handleReset() {
   searchForm.group_id = undefined;
   searchForm.is_up = undefined;
   searchForm.is_valid = undefined;
-  searchForm.has_buy = undefined;
   searchForm.status = undefined;
   searchForm.device_type = undefined;
   searchForm.start_time = undefined;
   searchForm.end_time = undefined;
-  searchForm.min_login_num = undefined;
-  searchForm.max_login_num = undefined;
   searchForm.user_id = "";
   searchForm.username = "";
   searchForm.parent_id = "";
@@ -236,6 +228,34 @@ async function handleDisable(row: BkUserApi.UserItem) {
     await setUserDisableApi(row.id, "disable", value || "后台禁用");
     ElMessage.success("已禁用");
   }
+  fetchList();
+}
+
+// ---------- 批量冻结/解冻 ----------
+const selectedRows = ref<BkUserApi.UserItem[]>([]);
+function handleSelectionChange(rows: BkUserApi.UserItem[]) {
+  selectedRows.value = rows;
+}
+async function handleBatchDisable(op: "disable" | "enable") {
+  const ids = selectedRows.value.map((r) => r.id);
+  if (!ids.length) return;
+  let reason = "";
+  if (op === "disable") {
+    const { value } = await ElMessageBox.prompt(
+      `批量冻结选中的 ${ids.length} 个用户, 请输入冻结原因`,
+      "批量冻结",
+      { inputPlaceholder: "如: 违规", type: "warning" },
+    );
+    reason = value || "后台批量冻结";
+  } else {
+    await ElMessageBox.confirm(`批量解冻选中的 ${ids.length} 个用户?`, "提示", {
+      type: "warning",
+    });
+  }
+  const res = await batchDisableUsersApi(ids, op, reason);
+  ElMessage.success(
+    `${op === "disable" ? "冻结" : "解冻"}完成, 实际变更 ${res.affected} 人`,
+  );
   fetchList();
 }
 
@@ -313,13 +333,12 @@ onMounted(async () => {
   <div class="p-5">
     <ElCard shadow="never">
       <ElForm :inline="true" class="user-search-form mb-2" @submit.prevent="handleSearch">
-        <div>
           <ElFormItem label="等级:">
             <ElSelect
               v-model="searchForm.group_id"
               clearable
               placeholder="请选择.."
-              style="width: 140px"
+              style="width: 200px"
             >
               <ElOption v-for="g in groups" :key="g.id" :label="g.name" :value="g.id" />
             </ElSelect>
@@ -329,7 +348,7 @@ onMounted(async () => {
               v-model="searchForm.is_up"
               clearable
               placeholder="请选择.."
-              style="width: 120px"
+              style="width: 200px"
             >
               <ElOption v-for="o in yesNoOptions" :key="`up-${o.value}`" :label="o.label" :value="o.value" />
             </ElSelect>
@@ -339,19 +358,9 @@ onMounted(async () => {
               v-model="searchForm.is_valid"
               clearable
               placeholder="请选择.."
-              style="width: 120px"
+              style="width: 200px"
             >
               <ElOption v-for="o in yesNoOptions" :key="`v-${o.value}`" :label="o.label" :value="o.value" />
-            </ElSelect>
-          </ElFormItem>
-          <ElFormItem label="是否购买:">
-            <ElSelect
-              v-model="searchForm.has_buy"
-              clearable
-              placeholder="请选择.."
-              style="width: 120px"
-            >
-              <ElOption v-for="o in yesNoOptions" :key="`b-${o.value}`" :label="o.label" :value="o.value" />
             </ElSelect>
           </ElFormItem>
           <ElFormItem label="状态:">
@@ -359,7 +368,7 @@ onMounted(async () => {
               v-model="searchForm.status"
               clearable
               placeholder="请选择.."
-              style="width: 120px"
+              style="width: 200px"
             >
               <ElOption v-for="o in statusOptions" :key="o.value" :label="o.label" :value="o.value" />
             </ElSelect>
@@ -369,7 +378,7 @@ onMounted(async () => {
               v-model="searchForm.device_type"
               clearable
               placeholder="请选择.."
-              style="width: 130px"
+              style="width: 200px"
             >
               <ElOption v-for="o in deviceOptions" :key="o.value" :label="o.label" :value="o.value" />
             </ElSelect>
@@ -380,7 +389,7 @@ onMounted(async () => {
               type="datetime"
               value-format="YYYY-MM-DD HH:mm:ss"
               placeholder="yyyy-mm-dd H:i:s"
-              style="width: 180px"
+              style="width: 200px"
             />
             <span class="mx-1">-</span>
             <ElDatePicker
@@ -388,34 +397,15 @@ onMounted(async () => {
               type="datetime"
               value-format="YYYY-MM-DD HH:mm:ss"
               placeholder="yyyy-mm-dd H:i:s"
-              style="width: 180px"
+              style="width: 200px"
             />
           </ElFormItem>
-          <ElFormItem label="登录次数:">
-            <ElInputNumber
-              v-model="searchForm.min_login_num"
-              :min="0"
-              :controls="false"
-              placeholder="最小值"
-              style="width: 100px"
-            />
-            <span class="mx-1">-</span>
-            <ElInputNumber
-              v-model="searchForm.max_login_num"
-              :min="0"
-              :controls="false"
-              placeholder="最大值"
-              style="width: 100px"
-            />
-          </ElFormItem>
-        </div>
-        <div>
           <ElFormItem label="用户ID:">
             <ElInput
               v-model="searchForm.user_id"
               clearable
               placeholder="请输入用户ID"
-              style="width: 150px"
+              style="width: 200px"
               @keyup.enter="handleSearch"
             />
           </ElFormItem>
@@ -424,7 +414,7 @@ onMounted(async () => {
               v-model="searchForm.username"
               clearable
               placeholder="请输入用户名"
-              style="width: 150px"
+              style="width: 200px"
               @keyup.enter="handleSearch"
             />
           </ElFormItem>
@@ -433,7 +423,7 @@ onMounted(async () => {
               v-model="searchForm.parent_id"
               clearable
               placeholder="请输入上级用户ID"
-              style="width: 160px"
+              style="width: 200px"
               @keyup.enter="handleSearch"
             />
           </ElFormItem>
@@ -442,7 +432,7 @@ onMounted(async () => {
               v-model="searchForm.channel"
               clearable
               placeholder="请输入渠道名"
-              style="width: 150px"
+              style="width: 200px"
               @keyup.enter="handleSearch"
             />
           </ElFormItem>
@@ -451,7 +441,7 @@ onMounted(async () => {
               v-model="searchForm.phone"
               clearable
               placeholder="请输入手机号码"
-              style="width: 150px"
+              style="width: 200px"
               @keyup.enter="handleSearch"
             />
           </ElFormItem>
@@ -459,10 +449,39 @@ onMounted(async () => {
             <ElButton type="primary" @click="handleSearch">搜索</ElButton>
             <ElButton @click="handleReset">重置</ElButton>
           </ElFormItem>
-        </div>
       </ElForm>
 
-      <ElTable v-loading="loading" :data="tableData" border stripe size="small">
+      <div class="mb-2 flex items-center gap-2">
+        <ElButton
+          type="danger"
+          plain
+          :disabled="!selectedRows.length"
+          @click="handleBatchDisable('disable')"
+        >
+          批量冻结
+        </ElButton>
+        <ElButton
+          type="success"
+          plain
+          :disabled="!selectedRows.length"
+          @click="handleBatchDisable('enable')"
+        >
+          批量解冻
+        </ElButton>
+        <span v-if="selectedRows.length" class="text-muted-foreground text-xs">
+          已选 {{ selectedRows.length }} 人
+        </span>
+      </div>
+
+      <ElTable
+        v-loading="loading"
+        :data="tableData"
+        border
+        stripe
+        size="small"
+        @selection-change="handleSelectionChange"
+      >
+        <ElTableColumn type="selection" width="42" align="center" />
         <ElTableColumn label="用户ID" width="120" align="center">
           <template #default="{ row }">
             <div>{{ row.id }}</div>
@@ -476,19 +495,12 @@ onMounted(async () => {
             <div class="text-xs" style="color: #4d56d2">标签:{{ parseTag(row.tag) }}</div>
           </template>
         </ElTableColumn>
-        <ElTableColumn label="登录二维码" width="100" align="center">
-          <template #default="{ row }">
-            <ElButton v-if="row.account_slat" link type="primary" @click="openLoginQr(row)">
-              查看
-            </ElButton>
-            <span v-else>-</span>
-          </template>
-        </ElTableColumn>
         <ElTableColumn label="头像" width="80" align="center">
           <template #default="{ row }">
             <ElImage
               v-if="row.img"
               :src="imgSrc(row.img)"
+              preview-teleported
               :preview-src-list="[imgSrc(row.img)]"
               fit="cover"
               style="width: 40px; height: 40px"
@@ -586,6 +598,9 @@ onMounted(async () => {
       <div class="flex flex-col items-center gap-3">
         <img v-if="qrDataUrl" :src="qrDataUrl" alt="login-qrcode" style="width: 220px; height: 220px" />
         <div class="text-muted-foreground break-all text-center text-xs">{{ qrText }}</div>
+        <div class="text-muted-foreground text-center text-xs">
+          找回账号: 用户在 App 登录页选择「找回账号」, 扫码或粘贴此凭证即可把账号恢复到新设备
+        </div>
       </div>
     </ElDialog>
 
@@ -617,6 +632,17 @@ onMounted(async () => {
           <ElDescriptionsItem label="登录次数">{{ detail.login_num }}</ElDescriptionsItem>
           <ElDescriptionsItem label="最后IP">{{ detail.last_ip || "-" }}</ElDescriptionsItem>
           <ElDescriptionsItem label="注册IP">{{ detail.register_ip || "-" }}</ElDescriptionsItem>
+          <ElDescriptionsItem label="登录凭证" :span="2">
+            <ElButton
+              v-if="detail.account_slat"
+              link
+              type="primary"
+              @click="openLoginQr(detail)"
+            >
+              查看登录二维码(找回账号用)
+            </ElButton>
+            <span v-else>-</span>
+          </ElDescriptionsItem>
           <ElDescriptionsItem label="状态" :span="2">
             <ElTag :type="detail.is_disabled === 0 ? 'success' : 'danger'">
               {{ detail.is_disabled === 0 ? "正常" : "禁用" }}
@@ -688,10 +714,11 @@ onMounted(async () => {
 
 <style scoped>
 .user-search-form :deep(.el-form-item) {
-  margin-right: 12px;
-  margin-bottom: 12px;
+  margin-right: 24px;
+  margin-bottom: 16px;
 }
 .user-search-form :deep(.el-form-item__label) {
-  padding-right: 6px;
+  padding-right: 8px;
+  font-weight: 500;
 }
 </style>
