@@ -35,10 +35,6 @@ import { uploadMediaApi } from "#/api/core/media";
 
 defineOptions({ name: "GrowthManage" });
 
-const levelOpts = [
-  { value: 1, label: "普通" },
-  { value: 2, label: "普通+暗网" },
-];
 const promotionOpts = [
   { value: 0, label: "正常价格" },
   { value: 1, label: "新人专享" },
@@ -148,7 +144,7 @@ function toPayload() {
     title_description: gForm.title_description,
     title_picture: gForm.title_picture,
     img: gForm.img,
-    level: gForm.level,
+    level: 1,
     promotion_type: gForm.promotion_type,
     price: Number(gForm.price) || 0,
     old_price: Number(gForm.old_price) || 0,
@@ -272,7 +268,6 @@ onMounted(loadGroups);
                 <span v-else>-</span>
               </template>
             </ElTableColumn>
-            <ElTableColumn prop="level_text" label="等级" min-width="110" align="center" />
             <ElTableColumn prop="price" label="价格" width="80" align="center" />
             <ElTableColumn prop="old_price" label="原价" width="80" align="center" />
             <ElTableColumn prop="sort" label="排序" width="70" align="center" />
@@ -323,16 +318,6 @@ onMounted(loadGroups);
             show-word-limit
             placeholder="请输入头部会员卡描述"
           />
-        </ElFormItem>
-        <ElFormItem label="等级" required>
-          <ElSelect v-model="gForm.level" class="w-full">
-            <ElOption
-              v-for="o in levelOpts"
-              :key="o.value"
-              :label="`${o.value} | ${o.label}`"
-              :value="o.value"
-            />
-          </ElSelect>
         </ElFormItem>
         <ElFormItem label="促销类型" required>
           <ElSelect v-model="gForm.promotion_type" class="w-full">
