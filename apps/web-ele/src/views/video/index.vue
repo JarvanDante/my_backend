@@ -28,9 +28,13 @@ import { uploadMediaApi } from "#/api/core/media";
 import {
   createVideoApi,
   deleteVideoApi,
+  getMediaAssetListApi,
   getVideoListApi,
+  pickMediaAssetApi,
   setVideoStatusApi,
+  syncMediaVideosApi,
   updateVideoApi,
+  type MediaAssetApi,
   type VideoApi,
 } from "#/api/core/video";
 import { uploadVideoMultipart } from "#/utils/multipart-upload";
@@ -40,7 +44,8 @@ defineOptions({ name: "VideoManage" });
 const loading = ref(false);
 const list = ref<VideoApi.Item[]>([]);
 const page = reactive({ current: 1, size: 20, total: 0 });
-const search = reactive({ keyword: "", status: 9 });
+const search = reactive({ keyword: "", media_code: "", status: 9 });
+const syncing = ref(false);
 
 const statusOpts = [
   { label: "全部", value: 9 },
@@ -59,6 +64,7 @@ async function loadList() {
   try {
     const res = await getVideoListApi({
       keyword: search.keyword || undefined,
+      media_code: search.media_code || undefined,
       status: search.status,
       page: page.current,
       size: page.size,
@@ -83,6 +89,7 @@ const form = reactive({
   source_url: "",
   source_key: "",
   source_media_id: 0,
+  media_code: "",
   duration: 0,
   sort: 0,
   status: 0,
@@ -104,6 +111,7 @@ function resetForm() {
     source_url: "",
     source_key: "",
     source_media_id: 0,
+    media_code: "",
     duration: 0,
     sort: 0,
     status: 0,
@@ -144,6 +152,7 @@ function openEdit(row: VideoApi.Item) {
     source_url: row.source_url,
     source_key: row.source_key,
     source_media_id: row.source_media_id,
+    media_code: row.media_code,
     duration: row.duration,
     sort: row.sort,
     status: row.status,
@@ -259,6 +268,62 @@ function formatDuration(sec: number) {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
+async function syncMedia() {
+  syncing.value = true;
+  try {
+    const res = await syncMediaVideosApi();
+    ElMessage.success(`同步完成：新增 ${res.created}，更新 ${res.updated}，媒资 ${res.total}`);
+    page.current = 1;
+    await loadList();
+  } catch (e: any) {
+    ElMessage.error(e?.message || "媒资同步失败");
+  } finally {
+    syncing.value = false;
+  }
+}
+
+const assetDialog = ref(false);
+const assetLoading = ref(false);
+const assets = ref<MediaAssetApi.Item[]>([]);
+const assetSearch = reactive({ keyword: "" });
+const assetPage = reactive({ current: 1, size: 10, total: 0 });
+const pickingId = ref("");
+
+async function loadAssets() {
+  assetLoading.value = true;
+  try {
+    const res = await getMediaAssetListApi({
+      keyword: assetSearch.keyword || undefined,
+      page: assetPage.current,
+      size: assetPage.size,
+    });
+    assets.value = res.list || [];
+    assetPage.total = res.total || 0;
+  } finally {
+    assetLoading.value = false;
+  }
+}
+
+function openAssetDialog() {
+  assetDialog.value = true;
+  assetPage.current = 1;
+  loadAssets();
+}
+
+async function pickAsset(row: MediaAssetApi.Item) {
+  pickingId.value = row.id;
+  try {
+    await pickMediaAssetApi(row.id);
+    ElMessage.success(`已选用「${row.title || row.id}」`);
+    await loadAssets();
+    await loadList();
+  } catch (e: any) {
+    ElMessage.error(e?.message || "选用失败");
+  } finally {
+    pickingId.value = "";
+  }
+}
+
 onMounted(loadList);
 </script>
 
@@ -273,6 +338,13 @@ onMounted(loadList);
           placeholder="搜索标题"
           @keyup.enter="loadList"
         />
+        <ElInput
+          v-model="search.media_code"
+          clearable
+          class="w-56"
+          placeholder="媒资ID"
+          @keyup.enter="loadList"
+        />
         <ElSelect v-model="search.status" class="w-32" @change="loadList">
           <ElOption
             v-for="o in statusOpts"
@@ -283,6 +355,8 @@ onMounted(loadList);
         </ElSelect>
         <ElButton type="primary" @click="loadList">查询</ElButton>
         <ElButton type="primary" @click="openCreate">新增视频</ElButton>
+        <ElButton type="primary" :loading="syncing" @click="syncMedia">媒资同步</ElButton>
+        <ElButton @click="openAssetDialog">从媒资中心选用</ElButton>
       </div>
 
       <ElTable v-loading="loading" :data="list" border stripe>
@@ -301,6 +375,11 @@ onMounted(loadList);
           </template>
         </ElTableColumn>
         <ElTableColumn prop="title" label="标题" min-width="160" />
+        <ElTableColumn prop="media_code" label="媒资ID" min-width="150" show-overflow-tooltip>
+          <template #default="{ row }">
+            {{ row.media_code || "-" }}
+          </template>
+        </ElTableColumn>
         <ElTableColumn label="时长" width="80" align="center">
           <template #default="{ row }">
             {{ formatDuration(row.duration) }}
@@ -394,6 +473,9 @@ onMounted(loadList);
           </ElDescriptionsItem>
           <ElDescriptionsItem label="标题" :span="2">
             {{ detail.title }}
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="媒资ID" :span="2">
+            {{ detail.media_code || "-" }}
           </ElDescriptionsItem>
           <ElDescriptionsItem label="简介" :span="2">
             {{ detail.description || "-" }}
@@ -528,6 +610,69 @@ onMounted(loadList);
         <ElButton @click="dialog = false">取消</ElButton>
         <ElButton type="primary" :loading="saving" @click="save">保存</ElButton>
       </template>
+    </ElDialog>
+
+    <ElDialog v-model="assetDialog" title="媒资中心" width="860px" destroy-on-close>
+      <div class="mb-3 flex items-center gap-2">
+        <ElInput
+          v-model="assetSearch.keyword"
+          clearable
+          class="w-64"
+          placeholder="搜索媒资标题"
+          @keyup.enter="loadAssets"
+        />
+        <ElButton type="primary" @click="loadAssets">查询</ElButton>
+      </div>
+      <ElTable v-loading="assetLoading" :data="assets" border stripe>
+        <ElTableColumn label="封面" width="90">
+          <template #default="{ row }">
+            <ElImage
+              v-if="row.cover_url"
+              :src="row.cover_url"
+              fit="cover"
+              class="h-14 w-14 rounded"
+              preview-teleported
+              :preview-src-list="[row.cover_url]"
+            />
+            <span v-else class="text-muted-foreground text-xs">无</span>
+          </template>
+        </ElTableColumn>
+        <ElTableColumn prop="id" label="媒资ID" min-width="160" show-overflow-tooltip />
+        <ElTableColumn prop="title" label="标题" min-width="160" />
+        <ElTableColumn label="时长" width="80" align="center">
+          <template #default="{ row }">
+            {{ formatDuration(row.duration_sec) }}
+          </template>
+        </ElTableColumn>
+        <ElTableColumn label="状态" width="90" align="center">
+          <template #default="{ row }">
+            <ElTag :type="row.local_id ? 'success' : 'info'" size="small">
+              {{ row.local_id ? "已入库" : "未入库" }}
+            </ElTag>
+          </template>
+        </ElTableColumn>
+        <ElTableColumn label="操作" width="100" fixed="right">
+          <template #default="{ row }">
+            <ElButton
+              link
+              type="primary"
+              :loading="pickingId === row.id"
+              @click="pickAsset(row)"
+            >
+              {{ row.local_id ? "更新" : "选用" }}
+            </ElButton>
+          </template>
+        </ElTableColumn>
+      </ElTable>
+      <div class="mt-3 flex justify-end">
+        <ElPagination
+          v-model:current-page="assetPage.current"
+          v-model:page-size="assetPage.size"
+          :total="assetPage.total"
+          layout="total, prev, pager, next"
+          @current-change="loadAssets"
+        />
+      </div>
     </ElDialog>
   </div>
 </template>
