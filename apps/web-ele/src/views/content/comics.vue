@@ -15,6 +15,7 @@ import {
   ElOption,
   ElPagination,
   ElSelect,
+  ElSwitch,
   ElTable,
   ElTableColumn,
   ElTag,
@@ -116,6 +117,7 @@ const emptyForm = (): ComicsApi.SaveBody & { id: number; tagText: string; catego
   free_chapter: 1,
   update_status: 1,
   rank: 0,
+  is_recommend: 0,
   status: 0,
 });
 const form = reactive(emptyForm());
@@ -155,6 +157,7 @@ function openEdit(row: ComicsApi.Item) {
     free_chapter: row.free_chapter,
     update_status: row.update_status,
     rank: row.rank,
+    is_recommend: row.is_recommend || 0,
     status: row.status,
   });
   dialog.value = true;
@@ -186,6 +189,7 @@ async function handleSave() {
     free_chapter: Number(form.free_chapter) || 0,
     update_status: form.update_status,
     rank: Number(form.rank) || 0,
+    is_recommend: form.is_recommend ? 1 : 0,
     status: form.status,
   };
   saving.value = true;
@@ -451,6 +455,12 @@ onMounted(() => {
             </ElTag>
           </template>
         </ElTableColumn>
+        <ElTableColumn label="推荐" width="70" align="center">
+          <template #default="{ row }">
+            <ElTag v-if="row.is_recommend === 1" type="warning" size="small">推荐</ElTag>
+            <span v-else class="text-gray-400">-</span>
+          </template>
+        </ElTableColumn>
         <ElTableColumn label="定价" width="120">
           <template #default="{ row }">
             <ElTag v-if="row.is_vip === 1" type="warning" size="small">VIP专享</ElTag>
@@ -560,6 +570,14 @@ onMounted(() => {
             <ElOption label="连载中" :value="1" />
             <ElOption label="已完结" :value="2" />
           </ElSelect>
+        </ElFormItem>
+        <ElFormItem label="H5 推荐">
+          <ElSwitch
+            v-model="form.is_recommend"
+            :active-value="1"
+            :inactive-value="0"
+          />
+          <span class="ml-2 text-xs text-gray-400">打开后进入 H5「推荐」栏，权重越大越靠前</span>
         </ElFormItem>
         <ElFormItem label="排序权重">
           <ElInputNumber v-model="form.rank" :min="0" />

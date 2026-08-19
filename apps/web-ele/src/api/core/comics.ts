@@ -27,6 +27,7 @@ export namespace ComicsApi {
     like_count: number;
     update_status: number;
     rank: number;
+    is_recommend?: number;
     status: number;
     publish_id: number;
     media_code?: string;
@@ -67,6 +68,7 @@ export namespace ComicsApi {
     free_chapter?: number;
     update_status?: number;
     rank?: number;
+    is_recommend?: number;
     status?: number;
   }
   export interface ChapterBody {
