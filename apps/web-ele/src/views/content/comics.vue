@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { onMounted, reactive, ref } from "vue";
+import { computed, onMounted, reactive, ref } from "vue";
 
 import {
   ElButton,
@@ -32,6 +32,10 @@ import {
   updateComicsApi,
   updateComicsChapterApi,
 } from "#/api/core/comics";
+import {
+  getComicsCategoryListApi,
+  type ComicsCategoryApi,
+} from "#/api/core/comics-category";
 
 defineOptions({ name: "ContentComics" });
 
@@ -52,6 +56,15 @@ const loading = ref(false);
 const list = ref<ComicsApi.Item[]>([]);
 const page = reactive({ current: 1, size: 20, total: 0 });
 const search = reactive({ status: "", category: "", keyword: "" });
+const categories = ref<ComicsCategoryApi.Item[]>([]);
+const workCategories = computed(() =>
+  categories.value.filter((c) => c.kind === 0 && c.status === 1),
+);
+
+async function loadCategories() {
+  const res = await getComicsCategoryListApi({ status: "1", page: 1, size: 100 });
+  categories.value = res.list || [];
+}
 
 async function fetchList() {
   loading.value = true;
@@ -286,7 +299,10 @@ async function delChapter(row: ComicsApi.Chapter) {
   fetchList();
 }
 
-onMounted(fetchList);
+onMounted(() => {
+  loadCategories().catch(() => undefined);
+  fetchList();
+});
 </script>
 
 <template>
@@ -296,13 +312,21 @@ onMounted(fetchList);
         <ElSelect v-model="search.status" style="width: 120px" @change="doSearch">
           <ElOption v-for="o in statusOpts" :key="o.value" :label="o.label" :value="o.value" />
         </ElSelect>
-        <ElInput
+        <ElSelect
           v-model="search.category"
           placeholder="分类"
-          style="width: 140px"
           clearable
-          @keyup.enter="doSearch"
-        />
+          filterable
+          style="width: 140px"
+          @change="doSearch"
+        >
+          <ElOption
+            v-for="c in workCategories"
+            :key="c.id"
+            :label="c.name"
+            :value="c.name"
+          />
+        </ElSelect>
         <ElInput
           v-model="search.keyword"
           placeholder="标题/作者关键字"
@@ -409,7 +433,21 @@ onMounted(fetchList);
           <ElInput v-model="form.intro" type="textarea" :rows="3" />
         </ElFormItem>
         <ElFormItem label="分类">
-          <ElInput v-model="form.category" placeholder="如: 热血 / 恋爱" />
+          <ElSelect
+            v-model="form.category"
+            placeholder="请选择分类"
+            clearable
+            filterable
+            allow-create
+            style="width: 220px"
+          >
+            <ElOption
+              v-for="c in workCategories"
+              :key="c.id"
+              :label="c.name"
+              :value="c.name"
+            />
+          </ElSelect>
         </ElFormItem>
         <ElFormItem label="标签">
           <ElInput v-model="form.tagText" placeholder="多个标签用逗号分隔" />
