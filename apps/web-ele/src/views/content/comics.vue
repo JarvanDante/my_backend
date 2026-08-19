@@ -101,13 +101,14 @@ const dialog = ref(false);
 const isEdit = ref(false);
 const saving = ref(false);
 const formRef = ref();
-const emptyForm = (): ComicsApi.SaveBody & { id: number; tagText: string } => ({
+const emptyForm = (): ComicsApi.SaveBody & { id: number; tagText: string; categories: string[] } => ({
   id: 0,
   title: "",
   author: "",
   cover: "",
   intro: "",
   category: "",
+  categories: [],
   tags: [],
   tagText: "",
   is_vip: 0,
@@ -121,6 +122,16 @@ const form = reactive(emptyForm());
 const rules = {
   title: [{ required: true, message: "标题必填", trigger: "blur" }],
 };
+
+function splitCategories(row: { category?: string; categories?: string[] }) {
+  if (row.categories?.length) {
+    return [...row.categories];
+  }
+  return (row.category || "")
+    .split(/[,，]/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
 
 function openCreate() {
   isEdit.value = false;
@@ -136,6 +147,7 @@ function openEdit(row: ComicsApi.Item) {
     cover: row.cover,
     intro: row.intro,
     category: row.category,
+    categories: splitCategories(row),
     tags: row.tags || [],
     tagText: (row.tags || []).join(","),
     is_vip: row.is_vip,
@@ -155,7 +167,7 @@ async function handleSave() {
     ElMessage.warning("VIP 专享与金币定价互斥, 二选一");
     return;
   }
-  if (form.status === 1 && !form.category) {
+  if (form.status === 1 && !form.categories.length) {
     ElMessage.warning("上架前请选择本站分类");
     return;
   }
@@ -164,7 +176,8 @@ async function handleSave() {
     author: form.author,
     cover: form.cover,
     intro: form.intro,
-    category: form.category,
+    category: form.categories.join(","),
+    categories: form.categories,
     tags: form.tagText
       ? form.tagText.split(/[,，]/).map((s) => s.trim()).filter(Boolean)
       : [],
@@ -192,7 +205,7 @@ async function handleSave() {
 }
 
 async function handleAudit(row: ComicsApi.Item, status: number) {
-  if (status === 1 && !row.category) {
+  if (status === 1 && !splitCategories(row).length) {
     ElMessage.warning("请先编辑并选择本站分类后再上架");
     openEdit(row);
     return;
@@ -416,9 +429,18 @@ onMounted(() => {
         </ElTableColumn>
         <ElTableColumn prop="title" label="标题" min-width="160" show-overflow-tooltip />
         <ElTableColumn prop="author" label="作者" width="110" />
-        <ElTableColumn label="分类" width="100">
+        <ElTableColumn label="分类" min-width="140">
           <template #default="{ row }">
-            <span v-if="row.category">{{ row.category }}</span>
+            <template v-if="splitCategories(row).length">
+              <ElTag
+                v-for="name in splitCategories(row)"
+                :key="name"
+                size="small"
+                class="mr-1"
+              >
+                {{ name }}
+              </ElTag>
+            </template>
             <span v-else class="text-orange-500">未分类</span>
           </template>
         </ElTableColumn>
@@ -498,8 +520,11 @@ onMounted(() => {
         </ElFormItem>
         <ElFormItem label="分类">
           <ElSelect
-            v-model="form.category"
-            placeholder="同步作品必须选本站分类后才能上架"
+            v-model="form.categories"
+            placeholder="可多选，上架前至少选一个"
+            multiple
+            collapse-tags
+            collapse-tags-tooltip
             clearable
             filterable
             style="width: 280px"

@@ -16,6 +16,7 @@ export namespace ComicsApi {
     cover: string;
     intro: string;
     category: string;
+    categories?: string[];
     tags: string[];
     is_vip: number;
     price: number;
@@ -59,6 +60,7 @@ export namespace ComicsApi {
     cover?: string;
     intro?: string;
     category?: string;
+    categories?: string[];
     tags?: string[];
     is_vip?: number;
     price?: number;
