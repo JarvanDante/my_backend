@@ -28,6 +28,7 @@ export namespace ComicsApi {
     rank: number;
     status: number;
     publish_id: number;
+    media_code?: string;
     created_at: string;
   }
   export interface Pic {
@@ -93,6 +94,36 @@ export function deleteComicsApi(id: number) {
 /** 上下架: status 0待上架 1上架 2下架 */
 export function auditComicsApi(id: number, status: number) {
   return requestClient.post(`/comics/${id}/audit`, { id, status });
+}
+
+export namespace MediaComicsApi {
+  export interface Item {
+    id: string;
+    title: string;
+    cover_url: string;
+    intro: string;
+    chapter_count: number;
+    picked: boolean;
+    local_id: number;
+  }
+  export interface Page {
+    list: Item[];
+    total: number;
+    page: number;
+    size: number;
+  }
+}
+
+export function getMediaComicsListApi(params: {
+  keyword?: string;
+  page?: number;
+  size?: number;
+}) {
+  return requestClient.get<MediaComicsApi.Page>("/media-comics", { params });
+}
+
+export function pickMediaComicsApi(id: string) {
+  return requestClient.post<{ id: number }>(`/media-comics/${id}/pick`);
 }
 
 export function getComicsChaptersApi(

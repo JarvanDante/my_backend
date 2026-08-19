@@ -29,6 +29,9 @@ import {
   deleteComicsChapterApi,
   getComicsChaptersApi,
   getComicsListApi,
+  getMediaComicsListApi,
+  pickMediaComicsApi,
+  type MediaComicsApi,
   updateComicsApi,
   updateComicsChapterApi,
 } from "#/api/core/comics";
@@ -152,6 +155,10 @@ async function handleSave() {
     ElMessage.warning("VIP 专享与金币定价互斥, 二选一");
     return;
   }
+  if (form.status === 1 && !form.category) {
+    ElMessage.warning("上架前请选择本站分类");
+    return;
+  }
   const body: ComicsApi.SaveBody = {
     title: form.title,
     author: form.author,
@@ -185,6 +192,11 @@ async function handleSave() {
 }
 
 async function handleAudit(row: ComicsApi.Item, status: number) {
+  if (status === 1 && !row.category) {
+    ElMessage.warning("请先编辑并选择本站分类后再上架");
+    openEdit(row);
+    return;
+  }
   await auditComicsApi(row.id, status);
   ElMessage.success(status === 1 ? "已上架" : "已下架");
   fetchList();
@@ -299,6 +311,52 @@ async function delChapter(row: ComicsApi.Chapter) {
   fetchList();
 }
 
+const assetDialog = ref(false);
+const assetLoading = ref(false);
+const assets = ref<MediaComicsApi.Item[]>([]);
+const assetSearch = reactive({ keyword: "" });
+const assetPage = reactive({ current: 1, size: 10, total: 0 });
+const pickingId = ref("");
+
+async function loadAssets() {
+  assetLoading.value = true;
+  try {
+    const res = await getMediaComicsListApi({
+      keyword: assetSearch.keyword || undefined,
+      page: assetPage.current,
+      size: assetPage.size,
+    });
+    assets.value = res.list || [];
+    assetPage.total = res.total || 0;
+  } finally {
+    assetLoading.value = false;
+  }
+}
+
+function openAssetDialog() {
+  assetDialog.value = true;
+  assetPage.current = 1;
+  void loadAssets();
+}
+
+async function pickAsset(row: MediaComicsApi.Item) {
+  pickingId.value = row.id;
+  try {
+    await pickMediaComicsApi(row.id);
+    ElMessage.success(
+      row.local_id
+        ? `已更新「${row.title || row.id}」`
+        : `已同步「${row.title || row.id}」，请编辑分类后再上架`,
+    );
+    await loadAssets();
+    await fetchList();
+  } catch (e: any) {
+    ElMessage.error(e?.message || "同步失败");
+  } finally {
+    pickingId.value = "";
+  }
+}
+
 onMounted(() => {
   loadCategories().catch(() => undefined);
   fetchList();
@@ -338,6 +396,7 @@ onMounted(() => {
         <ElButton @click="resetSearch">重置</ElButton>
         <div class="flex-1"></div>
         <ElButton type="primary" @click="openCreate">新增漫画</ElButton>
+        <ElButton @click="openAssetDialog">从媒资中心选用</ElButton>
       </div>
 
       <ElTable v-loading="loading" :data="list" border stripe>
@@ -357,7 +416,12 @@ onMounted(() => {
         </ElTableColumn>
         <ElTableColumn prop="title" label="标题" min-width="160" show-overflow-tooltip />
         <ElTableColumn prop="author" label="作者" width="110" />
-        <ElTableColumn prop="category" label="分类" width="100" />
+        <ElTableColumn label="分类" width="100">
+          <template #default="{ row }">
+            <span v-if="row.category">{{ row.category }}</span>
+            <span v-else class="text-orange-500">未分类</span>
+          </template>
+        </ElTableColumn>
         <ElTableColumn label="定价" width="120">
           <template #default="{ row }">
             <ElTag v-if="row.is_vip === 1" type="warning" size="small">VIP专享</ElTag>
@@ -435,11 +499,10 @@ onMounted(() => {
         <ElFormItem label="分类">
           <ElSelect
             v-model="form.category"
-            placeholder="请选择分类"
+            placeholder="同步作品必须选本站分类后才能上架"
             clearable
             filterable
-            allow-create
-            style="width: 220px"
+            style="width: 280px"
           >
             <ElOption
               v-for="c in workCategories"
@@ -570,6 +633,69 @@ onMounted(() => {
         <ElButton @click="chDialog = false">取消</ElButton>
         <ElButton type="primary" :loading="chSaving" @click="saveChapter">保存</ElButton>
       </template>
+    </ElDialog>
+
+    <ElDialog v-model="assetDialog" title="从媒资中心选用漫画" width="860px" destroy-on-close>
+      <p class="mb-3 text-xs text-gray-500">
+        总后台不指定分类。选用后进入「待上架」，请在本站编辑分类后再上架。
+      </p>
+      <div class="mb-3 flex items-center gap-2">
+        <ElInput
+          v-model="assetSearch.keyword"
+          clearable
+          class="w-64"
+          placeholder="搜索漫画标题"
+          @keyup.enter="loadAssets"
+        />
+        <ElButton type="primary" @click="loadAssets">查询</ElButton>
+      </div>
+      <ElTable v-loading="assetLoading" :data="assets" border stripe>
+        <ElTableColumn label="封面" width="80">
+          <template #default="{ row }">
+            <ElImage
+              v-if="row.cover_url"
+              :src="row.cover_url"
+              fit="cover"
+              class="h-14 w-10 rounded"
+              preview-teleported
+              :preview-src-list="[row.cover_url]"
+            />
+            <span v-else class="text-xs text-gray-400">无</span>
+          </template>
+        </ElTableColumn>
+        <ElTableColumn prop="title" label="标题" min-width="180" show-overflow-tooltip />
+        <ElTableColumn label="章节" width="80" align="center">
+          <template #default="{ row }">{{ row.chapter_count || 0 }} 章</template>
+        </ElTableColumn>
+        <ElTableColumn label="状态" width="90" align="center">
+          <template #default="{ row }">
+            <ElTag :type="row.local_id ? 'success' : 'info'" size="small">
+              {{ row.local_id ? "已入库" : "未入库" }}
+            </ElTag>
+          </template>
+        </ElTableColumn>
+        <ElTableColumn label="操作" width="100" fixed="right">
+          <template #default="{ row }">
+            <ElButton
+              link
+              type="primary"
+              :loading="pickingId === row.id"
+              @click="pickAsset(row)"
+            >
+              {{ row.local_id ? "更新" : "选用" }}
+            </ElButton>
+          </template>
+        </ElTableColumn>
+      </ElTable>
+      <div class="mt-3 flex justify-end">
+        <ElPagination
+          v-model:current-page="assetPage.current"
+          v-model:page-size="assetPage.size"
+          :total="assetPage.total"
+          layout="total, prev, pager, next"
+          @current-change="loadAssets"
+        />
+      </div>
     </ElDialog>
   </div>
 </template>
