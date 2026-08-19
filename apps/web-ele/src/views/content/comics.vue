@@ -571,13 +571,13 @@ onMounted(() => {
             <ElOption label="已完结" :value="2" />
           </ElSelect>
         </ElFormItem>
-        <ElFormItem label="H5 推荐">
+        <ElFormItem label="推荐">
           <ElSwitch
             v-model="form.is_recommend"
             :active-value="1"
             :inactive-value="0"
           />
-          <span class="ml-2 text-xs text-gray-400">打开后进入 H5「推荐」栏，权重越大越靠前</span>
+          <span class="ml-2 text-xs text-gray-400">打开后进入「推荐」栏，权重越大越靠前</span>
         </ElFormItem>
         <ElFormItem label="排序权重">
           <ElInputNumber v-model="form.rank" :min="0" />
