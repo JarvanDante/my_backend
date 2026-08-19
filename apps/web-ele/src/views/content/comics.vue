@@ -422,6 +422,13 @@ onMounted(() => {
             <span v-else class="text-orange-500">未分类</span>
           </template>
         </ElTableColumn>
+        <ElTableColumn label="状态" width="90" align="center">
+          <template #default="{ row }">
+            <ElTag :type="statusMap[row.status]?.type" size="small">
+              {{ statusMap[row.status]?.text ?? row.status }}
+            </ElTag>
+          </template>
+        </ElTableColumn>
         <ElTableColumn label="定价" width="120">
           <template #default="{ row }">
             <ElTag v-if="row.is_vip === 1" type="warning" size="small">VIP专享</ElTag>
@@ -441,13 +448,6 @@ onMounted(() => {
           </template>
         </ElTableColumn>
         <ElTableColumn prop="rank" label="权重" width="70" align="center" />
-        <ElTableColumn label="状态" width="90" align="center">
-          <template #default="{ row }">
-            <ElTag :type="statusMap[row.status]?.type" size="small">
-              {{ statusMap[row.status]?.text ?? row.status }}
-            </ElTag>
-          </template>
-        </ElTableColumn>
         <ElTableColumn label="操作" width="240" fixed="right">
           <template #default="{ row }">
             <ElButton link type="primary" @click="openChapters(row)">章节</ElButton>
