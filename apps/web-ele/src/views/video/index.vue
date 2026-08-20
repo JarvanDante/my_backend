@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { onMounted, reactive, ref } from "vue";
+import { computed, onMounted, reactive, ref } from "vue";
 
 import {
   ElButton,
@@ -16,7 +16,6 @@ import {
   ElMessageBox,
   ElOption,
   ElPagination,
-  ElProgress,
   ElSelect,
   ElTable,
   ElTableColumn,
@@ -25,6 +24,7 @@ import {
 } from "element-plus";
 
 import { uploadMediaApi } from "#/api/core/media";
+import { getTagListApi, type TagApi } from "#/api/core/tag";
 import {
   createVideoApi,
   deleteVideoApi,
@@ -37,7 +37,10 @@ import {
   type MediaAssetApi,
   type VideoApi,
 } from "#/api/core/video";
-import { uploadVideoMultipart } from "#/utils/multipart-upload";
+import {
+  getVideoCategoryListApi,
+  type VideoCategoryApi,
+} from "#/api/core/video-category";
 
 defineOptions({ name: "VideoManage" });
 
@@ -46,6 +49,30 @@ const list = ref<VideoApi.Item[]>([]);
 const page = reactive({ current: 1, size: 20, total: 0 });
 const search = reactive({ keyword: "", media_code: "", status: 9 });
 const syncing = ref(false);
+const categories = ref<VideoCategoryApi.Item[]>([]);
+const workCategories = computed(() =>
+  categories.value.filter((c) => c.kind === 0 && c.status === 1),
+);
+const videoTags = ref<TagApi.Item[]>([]);
+const enabledVideoTags = computed(() => videoTags.value.filter((t) => t.status === 1));
+
+async function loadCategories() {
+  const res = await getVideoCategoryListApi({ status: "1", page: 1, size: 100 });
+  categories.value = res.list || [];
+}
+async function loadVideoTags() {
+  const res = await getTagListApi({ content_type: 1, page: 1, size: 200 });
+  videoTags.value = res.list || [];
+}
+function splitCategories(row: { category?: string; categories?: string[] }) {
+  if (row.categories?.length) {
+    return [...row.categories];
+  }
+  return (row.category || "")
+    .split(/[,，]/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
 
 const statusOpts = [
   { label: "全部", value: 9 },
@@ -100,15 +127,14 @@ const form = reactive({
   source_key: "",
   source_media_id: 0,
   media_code: "",
+  categories: [] as string[],
+  tags: [] as string[],
   duration: 0,
   sort: 0,
   status: 0,
 });
 
 const coverUploading = ref(false);
-const videoUploading = ref(false);
-const videoPercent = ref(0);
-const videoFileName = ref("");
 
 function resetForm() {
   Object.assign(form, {
@@ -122,12 +148,12 @@ function resetForm() {
     source_key: "",
     source_media_id: 0,
     media_code: "",
+    categories: [] as string[],
+    tags: [] as string[],
     duration: 0,
     sort: 0,
     status: 0,
   });
-  videoPercent.value = 0;
-  videoFileName.value = "";
 }
 
 const detailVisible = ref(false);
@@ -163,12 +189,12 @@ function openEdit(row: VideoApi.Item) {
     source_key: row.source_key,
     source_media_id: row.source_media_id,
     media_code: row.media_code,
+    categories: splitCategories(row),
+    tags: row.tags || [],
     duration: row.duration,
     sort: row.sort,
     status: row.status,
   });
-  videoFileName.value = row.source_key ? row.source_key.split("/").pop() || "" : "";
-  videoPercent.value = row.source_url ? 100 : 0;
   dialog.value = true;
 }
 
@@ -188,64 +214,27 @@ async function onCoverChange(file: any) {
   return false;
 }
 
-async function onVideoChange(file: any) {
-  const raw: File | undefined = file?.raw;
-  if (!raw) return false;
-  videoUploading.value = true;
-  videoPercent.value = 0;
-  videoFileName.value = raw.name;
-  try {
-    // 浏览器读时长(可选)
-    try {
-      const url = URL.createObjectURL(raw);
-      const duration = await new Promise<number>((resolve) => {
-        const v = document.createElement("video");
-        v.preload = "metadata";
-        v.onloadedmetadata = () => {
-          resolve(Math.round(v.duration || 0));
-          URL.revokeObjectURL(url);
-        };
-        v.onerror = () => {
-          resolve(0);
-          URL.revokeObjectURL(url);
-        };
-        v.src = url;
-      });
-      if (duration > 0) form.duration = duration;
-    } catch {
-      // ignore
-    }
-
-    const res = await uploadVideoMultipart(raw, {
-      onProgress: (p) => {
-        videoPercent.value = p.percent;
-      },
-    });
-    form.source_url = res.url;
-    form.source_key = res.object_key;
-    form.source_media_id = res.id;
-    videoPercent.value = 100;
-    ElMessage.success("视频上传成功");
-  } catch (e: any) {
-    ElMessage.error(e?.message || "视频上传失败");
-  } finally {
-    videoUploading.value = false;
-  }
-  return false;
-}
-
 async function save() {
   if (!form.title.trim()) {
     ElMessage.warning("请填写标题");
     return;
   }
-  if (!form.source_url) {
-    ElMessage.warning("请先上传视频");
+  if (!form.source_url && !form.media_code) {
+    ElMessage.warning("请从媒资中心选用视频");
+    return;
+  }
+  if (form.status === 1 && !form.categories.length) {
+    ElMessage.warning("上架前请选择本站分类");
     return;
   }
   saving.value = true;
   try {
-    const payload = { ...form };
+    const payload = {
+      ...form,
+      category: form.categories.join(","),
+      categories: form.categories,
+      tags: form.tags || [],
+    };
     if (editing.value) await updateVideoApi(payload);
     else await createVideoApi(payload);
     ElMessage.success("保存成功");
@@ -266,6 +255,11 @@ async function remove(row: VideoApi.Item) {
 }
 
 async function toggleStatus(row: VideoApi.Item, status: number) {
+  if (status === 1 && !splitCategories(row).length) {
+    ElMessage.warning("请先编辑并选择本站分类后再上架");
+    openEdit(row);
+    return;
+  }
   await setVideoStatusApi(row.id, status);
   ElMessage.success("已更新状态");
   loadList();
@@ -324,7 +318,7 @@ async function pickAsset(row: MediaAssetApi.Item) {
   pickingId.value = row.id;
   try {
     await pickMediaAssetApi(row.id);
-    ElMessage.success(`已选用「${row.title || row.id}」`);
+    ElMessage.success(`已选用「${row.title || row.id}」，请编辑分类后再上架`);
     await loadAssets();
     await loadList();
   } catch (e: any) {
@@ -334,7 +328,11 @@ async function pickAsset(row: MediaAssetApi.Item) {
   }
 }
 
-onMounted(loadList);
+onMounted(() => {
+  loadCategories().catch(() => undefined);
+  loadVideoTags().catch(() => undefined);
+  loadList();
+});
 </script>
 
 <template>
@@ -387,6 +385,37 @@ onMounted(loadList);
           </template>
         </ElTableColumn>
         <ElTableColumn prop="title" label="标题" min-width="160" />
+        <ElTableColumn label="分类" width="80">
+          <template #default="{ row }">
+            <template v-if="splitCategories(row).length">
+              <ElTag
+                v-for="name in splitCategories(row)"
+                :key="name"
+                size="small"
+                class="video-chip"
+              >
+                {{ name }}
+              </ElTag>
+            </template>
+            <span v-else class="text-orange-500">未分类</span>
+          </template>
+        </ElTableColumn>
+        <ElTableColumn label="标签" width="80">
+          <template #default="{ row }">
+            <template v-if="row.tags?.length">
+              <ElTag
+                v-for="name in row.tags"
+                :key="name"
+                type="primary"
+                size="small"
+                class="video-chip"
+              >
+                {{ name }}
+              </ElTag>
+            </template>
+            <span v-else class="text-gray-400">-</span>
+          </template>
+        </ElTableColumn>
         <ElTableColumn prop="media_code" label="媒资ID" min-width="150" show-overflow-tooltip>
           <template #default="{ row }">
             {{ row.media_code || "-" }}
@@ -571,38 +600,61 @@ onMounted(loadList);
             </ElUpload>
           </div>
         </ElFormItem>
-        <ElFormItem label="视频" required>
-          <div class="w-full">
-            <ElUpload
-              :show-file-list="false"
-              accept="video/*"
-              :disabled="videoUploading"
-              :before-upload="() => false"
-              :on-change="onVideoChange"
+        <ElFormItem label="视频">
+          <div v-if="form.source_url || form.media_code" class="w-full">
+            <div v-if="form.media_code" class="text-muted-foreground mb-1 text-xs">
+              媒资ID：{{ form.media_code }}
+            </div>
+            <a
+              v-if="form.source_url"
+              :href="form.source_url"
+              target="_blank"
+              class="text-primary text-xs break-all"
             >
-              <ElButton type="primary" :loading="videoUploading">
-                {{ form.source_url ? "重新上传视频" : "分片上传视频" }}
-              </ElButton>
-            </ElUpload>
-            <div v-if="videoFileName" class="text-muted-foreground mt-2 text-xs">
-              {{ videoFileName }}
-            </div>
-            <ElProgress
-              v-if="videoUploading || videoPercent > 0"
-              class="mt-2"
-              :percentage="videoPercent"
-              :status="videoPercent >= 100 ? 'success' : undefined"
-            />
-            <div v-if="form.source_url" class="mt-2">
-              <a
-                :href="form.source_url"
-                target="_blank"
-                class="text-primary text-xs break-all"
-              >
-                {{ form.source_url }}
-              </a>
-            </div>
+              {{ form.source_url }}
+            </a>
           </div>
+          <span v-else class="text-xs text-gray-400">
+            请从媒资中心选用，子后台不支持上传视频
+          </span>
+        </ElFormItem>
+        <ElFormItem label="分类">
+          <ElSelect
+            v-model="form.categories"
+            class="video-multi-select"
+            placeholder="可多选，上架前至少选一个"
+            multiple
+            clearable
+            filterable
+            tag-type="primary"
+          >
+            <ElOption
+              v-for="c in workCategories"
+              :key="c.id"
+              :label="c.name"
+              :value="c.name"
+            />
+          </ElSelect>
+        </ElFormItem>
+        <ElFormItem label="标签">
+          <ElSelect
+            v-model="form.tags"
+            class="video-multi-select"
+            placeholder="从视频标签库多选"
+            multiple
+            clearable
+            filterable
+            allow-create
+            default-first-option
+            tag-type="primary"
+          >
+            <ElOption
+              v-for="t in enabledVideoTags"
+              :key="t.id"
+              :label="t.name"
+              :value="t.name"
+            />
+          </ElSelect>
         </ElFormItem>
         <ElFormItem label="时长(秒)">
           <ElInputNumber v-model="form.duration" :min="0" :max="86400" />
@@ -625,6 +677,9 @@ onMounted(loadList);
     </ElDialog>
 
     <ElDialog v-model="assetDialog" title="媒资中心" width="860px" destroy-on-close>
+      <p class="mb-3 text-xs text-gray-400">
+        总后台上传视频。选用后进入草稿，请在本站编辑分类后再上架。
+      </p>
       <div class="mb-3 flex items-center gap-2">
         <ElInput
           v-model="assetSearch.keyword"
@@ -688,3 +743,24 @@ onMounted(loadList);
     </ElDialog>
   </div>
 </template>
+
+<style scoped>
+.video-chip {
+  margin: 0 2px 2px 0;
+}
+.video-multi-select {
+  width: 100%;
+}
+.video-multi-select :deep(.el-select__selection) {
+  flex-wrap: wrap;
+}
+.video-multi-select :deep(.el-select__selected-item) {
+  max-width: 100%;
+}
+.video-multi-select :deep(.el-tag) {
+  --el-tag-bg-color: var(--el-color-primary);
+  --el-tag-text-color: #fff;
+  --el-tag-border-color: var(--el-color-primary);
+  --el-tag-hover-color: var(--el-color-primary-light-3);
+}
+</style>
