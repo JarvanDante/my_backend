@@ -445,12 +445,28 @@ onMounted(() => {
                 v-for="name in splitCategories(row)"
                 :key="name"
                 size="small"
-                class="mr-1"
+                class="mb-1 mr-1"
               >
                 {{ name }}
               </ElTag>
             </template>
             <span v-else class="text-orange-500">未分类</span>
+          </template>
+        </ElTableColumn>
+        <ElTableColumn label="标签" min-width="160">
+          <template #default="{ row }">
+            <template v-if="row.tags?.length">
+              <ElTag
+                v-for="name in row.tags"
+                :key="name"
+                type="info"
+                size="small"
+                class="mb-1 mr-1"
+              >
+                {{ name }}
+              </ElTag>
+            </template>
+            <span v-else class="text-gray-400">-</span>
           </template>
         </ElTableColumn>
         <ElTableColumn label="状态" width="90" align="center">
@@ -536,13 +552,11 @@ onMounted(() => {
         <ElFormItem label="分类">
           <ElSelect
             v-model="form.categories"
+            class="comics-multi-select"
             placeholder="可多选，上架前至少选一个"
             multiple
-            collapse-tags
-            collapse-tags-tooltip
             clearable
             filterable
-            style="width: 280px"
           >
             <ElOption
               v-for="c in workCategories"
@@ -555,15 +569,13 @@ onMounted(() => {
         <ElFormItem label="标签">
           <ElSelect
             v-model="form.tags"
+            class="comics-multi-select"
             placeholder="从漫画标签库多选"
             multiple
-            collapse-tags
-            collapse-tags-tooltip
             clearable
             filterable
             allow-create
             default-first-option
-            style="width: 280px"
           >
             <ElOption
               v-for="t in enabledMangaTags"
@@ -765,3 +777,15 @@ onMounted(() => {
     </ElDialog>
   </div>
 </template>
+
+<style scoped>
+.comics-multi-select {
+  width: 100%;
+}
+.comics-multi-select :deep(.el-select__selection) {
+  flex-wrap: wrap;
+}
+.comics-multi-select :deep(.el-select__selected-item) {
+  max-width: 100%;
+}
+</style>
