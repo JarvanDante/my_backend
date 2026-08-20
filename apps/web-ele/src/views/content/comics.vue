@@ -557,6 +557,7 @@ onMounted(() => {
             multiple
             clearable
             filterable
+            tag-type="primary"
           >
             <ElOption
               v-for="c in workCategories"
@@ -576,6 +577,7 @@ onMounted(() => {
             filterable
             allow-create
             default-first-option
+            tag-type="primary"
           >
             <ElOption
               v-for="t in enabledMangaTags"
@@ -787,5 +789,11 @@ onMounted(() => {
 }
 .comics-multi-select :deep(.el-select__selected-item) {
   max-width: 100%;
+}
+.comics-multi-select :deep(.el-tag) {
+  --el-tag-bg-color: var(--el-color-primary);
+  --el-tag-text-color: #fff;
+  --el-tag-border-color: var(--el-color-primary);
+  --el-tag-hover-color: var(--el-color-primary-light-3);
 }
 </style>
