@@ -37,6 +37,7 @@ import {
   type BkUserApi,
 } from "#/api/core/bkuser";
 import { getGroupListApi, type BkGroupApi } from "#/api/core/bkgroup";
+import { adminMediaUrl } from "#/utils/media";
 
 defineOptions({ name: "UserManage" });
 
@@ -124,8 +125,7 @@ function deviceText(row: BkUserApi.UserItem) {
 
 function imgSrc(img: string) {
   if (!img) return "";
-  if (/^https?:\/\//i.test(img)) return img;
-  return img;
+  return adminMediaUrl(img);
 }
 
 async function fetchList() {
