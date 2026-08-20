@@ -21,6 +21,7 @@ import {
   ElTag,
 } from "element-plus";
 
+import { adminMediaUrl } from "#/utils/media";
 import {
   auditComicsApi,
   type ComicsApi,
@@ -435,11 +436,11 @@ onMounted(() => {
           <template #default="{ row }">
             <ElImage
               v-if="row.cover"
-              :src="row.cover"
+              :src="adminMediaUrl(row.cover)"
               fit="cover"
               style="width: 44px; height: 60px"
               preview-teleported
-              :preview-src-list="[row.cover]"
+              :preview-src-list="[adminMediaUrl(row.cover)]"
             />
             <span v-else class="text-gray-400">-</span>
           </template>
@@ -744,11 +745,11 @@ onMounted(() => {
           <template #default="{ row }">
             <ElImage
               v-if="row.cover_url"
-              :src="row.cover_url"
+              :src="adminMediaUrl(row.cover_url)"
               fit="cover"
               class="h-14 w-10 rounded"
               preview-teleported
-              :preview-src-list="[row.cover_url]"
+              :preview-src-list="[adminMediaUrl(row.cover_url)]"
             />
             <span v-else class="text-xs text-gray-400">无</span>
           </template>

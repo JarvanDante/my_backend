@@ -6,6 +6,8 @@ import { setupVbenVxeTable, useVbenVxeGrid } from '@vben/plugins/vxe-table';
 
 import { ElButton, ElImage } from 'element-plus';
 
+import { adminMediaUrl } from '#/utils/media';
+
 import { useVbenForm } from './form';
 
 setupVbenVxeTable({
@@ -42,8 +44,8 @@ setupVbenVxeTable({
     vxeUI.renderer.add('CellImage', {
       renderTableDefault(_renderOpts, params) {
         const { column, row } = params;
-        const src = row[column.field];
-        return h(ElImage, { src, previewSrcList: [src] });
+        const src = adminMediaUrl(row[column.field]);
+        return h(ElImage, { src, previewSrcList: src ? [src] : [] });
       },
     });
 

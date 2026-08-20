@@ -24,6 +24,7 @@ import {
 } from "element-plus";
 
 import { uploadMediaApi } from "#/api/core/media";
+import { adminMediaUrl } from "#/utils/media";
 import { getTagListApi, type TagApi } from "#/api/core/tag";
 import {
   createVideoApi,
@@ -390,11 +391,11 @@ onMounted(() => {
           <template #default="{ row }">
             <ElImage
               v-if="row.cover_url"
-              :src="row.cover_url"
+              :src="adminMediaUrl(row.cover_url)"
               fit="cover"
               class="h-14 w-14 rounded"
               preview-teleported
-              :preview-src-list="[row.cover_url]"
+              :preview-src-list="[adminMediaUrl(row.cover_url)]"
             />
             <span v-else class="text-muted-foreground text-xs">无</span>
           </template>
@@ -504,7 +505,7 @@ onMounted(() => {
             controls
             preload="metadata"
             playsinline
-            :poster="detail.cover_url || undefined"
+            :poster="adminMediaUrl(detail.cover_url) || undefined"
             :src="detail.source_url"
           >
             您的浏览器不支持播放
@@ -549,11 +550,11 @@ onMounted(() => {
           <ElDescriptionsItem label="封面" :span="2">
             <ElImage
               v-if="detail.cover_url"
-              :src="detail.cover_url"
+              :src="adminMediaUrl(detail.cover_url)"
               fit="cover"
               class="h-20 w-20 rounded"
               preview-teleported
-              :preview-src-list="[detail.cover_url]"
+              :preview-src-list="[adminMediaUrl(detail.cover_url)]"
             />
             <span v-else>-</span>
           </ElDescriptionsItem>
@@ -598,7 +599,7 @@ onMounted(() => {
           <div class="flex items-start gap-3">
             <ElImage
               v-if="form.cover_url"
-              :src="form.cover_url"
+              :src="adminMediaUrl(form.cover_url)"
               fit="cover"
               class="h-20 w-20 rounded border"
             />
@@ -710,11 +711,11 @@ onMounted(() => {
           <template #default="{ row }">
             <ElImage
               v-if="row.cover_url"
-              :src="row.cover_url"
+              :src="adminMediaUrl(row.cover_url)"
               fit="cover"
               class="h-14 w-14 rounded"
               preview-teleported
-              :preview-src-list="[row.cover_url]"
+              :preview-src-list="[adminMediaUrl(row.cover_url)]"
             />
             <span v-else class="text-muted-foreground text-xs">无</span>
           </template>

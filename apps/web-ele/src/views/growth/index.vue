@@ -32,6 +32,7 @@ import {
   updateGroupApi,
 } from "#/api/core/bkgroup";
 import { uploadMediaApi } from "#/api/core/media";
+import { adminMediaUrl } from "#/utils/media";
 
 defineOptions({ name: "GrowthManage" });
 
@@ -259,7 +260,7 @@ onMounted(loadGroups);
               <template #default="{ row }">
                 <ElImage
                   v-if="row.img"
-                  :src="row.img"
+                  :src="adminMediaUrl(row.img)"
                   fit="contain"
                   class="h-6 w-8"
                   preview-teleported
@@ -365,7 +366,7 @@ onMounted(loadGroups);
           <div class="flex items-start gap-3">
             <ElImage
               v-if="gForm.img"
-              :src="gForm.img"
+              :src="adminMediaUrl(gForm.img)"
               fit="contain"
               class="h-20 w-28 rounded border"
             />
@@ -386,7 +387,7 @@ onMounted(loadGroups);
           <div class="flex items-start gap-3">
             <ElImage
               v-if="gForm.title_picture"
-              :src="gForm.title_picture"
+              :src="adminMediaUrl(gForm.title_picture)"
               fit="contain"
               class="h-20 w-28 rounded border"
             />
