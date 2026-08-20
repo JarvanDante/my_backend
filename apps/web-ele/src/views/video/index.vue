@@ -75,6 +75,16 @@ async function loadList() {
     loading.value = false;
   }
 }
+function doSearch() {
+  page.current = 1;
+  loadList();
+}
+function resetSearch() {
+  search.keyword = "";
+  search.media_code = "";
+  search.status = 9;
+  doSearch();
+}
 
 const dialog = ref(false);
 const editing = ref(false);
@@ -330,22 +340,22 @@ onMounted(loadList);
 <template>
   <div class="p-5">
     <ElCard shadow="never">
-      <div class="mb-4 flex flex-wrap items-center gap-3">
+      <div class="mb-4 flex flex-wrap items-center gap-2">
         <ElInput
           v-model="search.keyword"
           clearable
-          class="w-56"
           placeholder="搜索标题"
-          @keyup.enter="loadList"
+          style="width: 180px"
+          @keyup.enter="doSearch"
         />
         <ElInput
           v-model="search.media_code"
           clearable
-          class="w-56"
           placeholder="媒资ID"
-          @keyup.enter="loadList"
+          style="width: 180px"
+          @keyup.enter="doSearch"
         />
-        <ElSelect v-model="search.status" class="w-32" @change="loadList">
+        <ElSelect v-model="search.status" style="width: 120px" @change="doSearch">
           <ElOption
             v-for="o in statusOpts"
             :key="o.value"
@@ -353,7 +363,9 @@ onMounted(loadList);
             :value="o.value"
           />
         </ElSelect>
-        <ElButton type="primary" @click="loadList">查询</ElButton>
+        <ElButton type="primary" @click="doSearch">查询</ElButton>
+        <ElButton @click="resetSearch">重置</ElButton>
+        <div class="flex-1"></div>
         <ElButton type="primary" @click="openCreate">新增视频</ElButton>
         <ElButton type="primary" :loading="syncing" @click="syncMedia">媒资同步</ElButton>
         <ElButton @click="openAssetDialog">从媒资中心选用</ElButton>
