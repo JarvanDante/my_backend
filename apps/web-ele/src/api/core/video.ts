@@ -12,6 +12,9 @@ export namespace VideoApi {
     source_key: string;
     source_media_id: number;
     media_code: string;
+    category: string;
+    categories: string[];
+    tags: string[];
     duration: number;
     sort: number;
     status: number;
@@ -39,6 +42,9 @@ export namespace VideoApi {
       | "source_key"
       | "source_media_id"
       | "media_code"
+      | "category"
+      | "categories"
+      | "tags"
       | "duration"
       | "sort"
       | "status"
