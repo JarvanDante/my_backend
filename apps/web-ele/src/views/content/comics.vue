@@ -421,31 +421,31 @@ onMounted(() => {
         <ElButton @click="openAssetDialog">从媒资中心选用</ElButton>
       </div>
 
-      <ElTable v-loading="loading" :data="list" border stripe>
-        <ElTableColumn prop="id" label="ID" width="70" />
-        <ElTableColumn label="封面" width="80">
+      <ElTable v-loading="loading" :data="list" class="comics-table" size="small" border stripe>
+        <ElTableColumn prop="id" label="ID" width="52" align="center" />
+        <ElTableColumn label="封面" width="60" align="center">
           <template #default="{ row }">
             <ElImage
               v-if="row.cover"
               :src="row.cover"
               fit="cover"
-              style="width: 44px; height: 60px"
+              style="width: 32px; height: 44px"
               preview-teleported
               :preview-src-list="[row.cover]"
             />
             <span v-else class="text-gray-400">-</span>
           </template>
         </ElTableColumn>
-        <ElTableColumn prop="title" label="标题" min-width="160" show-overflow-tooltip />
-        <ElTableColumn prop="author" label="作者" width="110" />
-        <ElTableColumn label="分类" min-width="140">
+        <ElTableColumn prop="title" label="标题" min-width="110" show-overflow-tooltip />
+        <ElTableColumn prop="author" label="作者" width="72" show-overflow-tooltip />
+        <ElTableColumn label="分类" min-width="100">
           <template #default="{ row }">
             <template v-if="splitCategories(row).length">
               <ElTag
                 v-for="name in splitCategories(row)"
                 :key="name"
                 size="small"
-                class="mb-1 mr-1"
+                class="comics-chip"
               >
                 {{ name }}
               </ElTag>
@@ -453,15 +453,15 @@ onMounted(() => {
             <span v-else class="text-orange-500">未分类</span>
           </template>
         </ElTableColumn>
-        <ElTableColumn label="标签" min-width="160">
+        <ElTableColumn label="标签" min-width="100">
           <template #default="{ row }">
             <template v-if="row.tags?.length">
               <ElTag
                 v-for="name in row.tags"
                 :key="name"
-                type="info"
+                type="primary"
                 size="small"
-                class="mb-1 mr-1"
+                class="comics-chip"
               >
                 {{ name }}
               </ElTag>
@@ -469,20 +469,20 @@ onMounted(() => {
             <span v-else class="text-gray-400">-</span>
           </template>
         </ElTableColumn>
-        <ElTableColumn label="状态" width="90" align="center">
+        <ElTableColumn label="状态" width="68" align="center">
           <template #default="{ row }">
             <ElTag :type="statusMap[row.status]?.type" size="small">
               {{ statusMap[row.status]?.text ?? row.status }}
             </ElTag>
           </template>
         </ElTableColumn>
-        <ElTableColumn label="推荐" width="70" align="center">
+        <ElTableColumn label="推荐" width="52" align="center">
           <template #default="{ row }">
             <ElTag v-if="row.is_recommend === 1" type="warning" size="small">推荐</ElTag>
             <span v-else class="text-gray-400">-</span>
           </template>
         </ElTableColumn>
-        <ElTableColumn label="定价" width="120">
+        <ElTableColumn label="定价" width="72" align="center">
           <template #default="{ row }">
             <ElTag v-if="row.is_vip === 1" type="warning" size="small">VIP专享</ElTag>
             <ElTag v-else-if="row.price > 0" type="danger" size="small">
@@ -491,17 +491,17 @@ onMounted(() => {
             <ElTag v-else type="success" size="small">免费</ElTag>
           </template>
         </ElTableColumn>
-        <ElTableColumn prop="free_chapter" label="免费章" width="80" align="center" />
-        <ElTableColumn prop="chapter_count" label="章节数" width="80" align="center" />
-        <ElTableColumn prop="view_count" label="观看" width="80" align="center" />
-        <ElTableColumn prop="buy_count" label="购买" width="80" align="center" />
-        <ElTableColumn label="连载" width="80" align="center">
+        <ElTableColumn prop="free_chapter" label="免费章" width="60" align="center" />
+        <ElTableColumn prop="chapter_count" label="章节数" width="60" align="center" />
+        <ElTableColumn prop="view_count" label="观看" width="52" align="center" />
+        <ElTableColumn prop="buy_count" label="购买" width="52" align="center" />
+        <ElTableColumn label="连载" width="60" align="center">
           <template #default="{ row }">
             {{ row.update_status === 2 ? "完结" : "连载中" }}
           </template>
         </ElTableColumn>
-        <ElTableColumn prop="rank" label="权重" width="70" align="center" />
-        <ElTableColumn label="操作" width="240" fixed="right">
+        <ElTableColumn prop="rank" label="权重" width="48" align="center" />
+        <ElTableColumn label="操作" width="200" fixed="right">
           <template #default="{ row }">
             <ElButton link type="primary" @click="openChapters(row)">章节</ElButton>
             <ElButton link type="primary" @click="openEdit(row)">编辑</ElButton>
@@ -781,6 +781,12 @@ onMounted(() => {
 </template>
 
 <style scoped>
+.comics-table :deep(.el-table__cell) {
+  padding: 4px 6px;
+}
+.comics-chip {
+  margin: 0 4px 4px 0;
+}
 .comics-multi-select {
   width: 100%;
 }
