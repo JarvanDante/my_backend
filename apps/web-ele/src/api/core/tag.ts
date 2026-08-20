@@ -20,6 +20,7 @@ export namespace TagApi {
   export interface ListParams {
     content_type?: number;
     status?: string;
+    keyword?: string;
     page?: number;
     size?: number;
   }
