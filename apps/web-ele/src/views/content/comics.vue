@@ -423,22 +423,22 @@ onMounted(() => {
 
       <ElTable v-loading="loading" :data="list" class="comics-table" size="small" border stripe>
         <ElTableColumn prop="id" label="ID" width="52" align="center" />
-        <ElTableColumn label="封面" width="60" align="center">
+        <ElTableColumn label="封面" width="76" align="center">
           <template #default="{ row }">
             <ElImage
               v-if="row.cover"
               :src="row.cover"
               fit="cover"
-              style="width: 32px; height: 44px"
+              style="width: 44px; height: 60px"
               preview-teleported
               :preview-src-list="[row.cover]"
             />
             <span v-else class="text-gray-400">-</span>
           </template>
         </ElTableColumn>
-        <ElTableColumn prop="title" label="标题" min-width="110" show-overflow-tooltip />
-        <ElTableColumn prop="author" label="作者" width="72" show-overflow-tooltip />
-        <ElTableColumn label="分类" min-width="100">
+        <ElTableColumn prop="title" label="标题" width="128" show-overflow-tooltip />
+        <ElTableColumn prop="author" label="作者" width="56" show-overflow-tooltip />
+        <ElTableColumn label="分类" width="76">
           <template #default="{ row }">
             <template v-if="splitCategories(row).length">
               <ElTag
@@ -453,7 +453,7 @@ onMounted(() => {
             <span v-else class="text-orange-500">未分类</span>
           </template>
         </ElTableColumn>
-        <ElTableColumn label="标签" min-width="100">
+        <ElTableColumn label="标签" width="76">
           <template #default="{ row }">
             <template v-if="row.tags?.length">
               <ElTag
@@ -501,22 +501,24 @@ onMounted(() => {
           </template>
         </ElTableColumn>
         <ElTableColumn prop="rank" label="权重" width="48" align="center" />
-        <ElTableColumn label="操作" width="200" fixed="right">
+        <ElTableColumn label="操作" width="228" fixed="right">
           <template #default="{ row }">
-            <ElButton link type="primary" @click="openChapters(row)">章节</ElButton>
-            <ElButton link type="primary" @click="openEdit(row)">编辑</ElButton>
-            <ElButton
-              v-if="row.status !== 1"
-              link
-              type="success"
-              @click="handleAudit(row, 1)"
-            >
-              上架
-            </ElButton>
-            <ElButton v-else link type="warning" @click="handleAudit(row, 2)">
-              下架
-            </ElButton>
-            <ElButton link type="danger" @click="handleDelete(row)">删除</ElButton>
+            <div class="comics-ops">
+              <ElButton link type="primary" @click="openChapters(row)">章节</ElButton>
+              <ElButton link type="primary" @click="openEdit(row)">编辑</ElButton>
+              <ElButton
+                v-if="row.status !== 1"
+                link
+                type="success"
+                @click="handleAudit(row, 1)"
+              >
+                上架
+              </ElButton>
+              <ElButton v-else link type="warning" @click="handleAudit(row, 2)">
+                下架
+              </ElButton>
+              <ElButton link type="danger" @click="handleDelete(row)">删除</ElButton>
+            </div>
           </template>
         </ElTableColumn>
       </ElTable>
@@ -785,7 +787,13 @@ onMounted(() => {
   padding: 4px 6px;
 }
 .comics-chip {
-  margin: 0 4px 4px 0;
+  margin: 0 2px 2px 0;
+}
+.comics-ops {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  white-space: nowrap;
 }
 .comics-multi-select {
   width: 100%;
