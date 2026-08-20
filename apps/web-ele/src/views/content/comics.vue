@@ -421,7 +421,15 @@ onMounted(() => {
         <ElButton @click="openAssetDialog">从媒资中心选用</ElButton>
       </div>
 
-      <ElTable v-loading="loading" :data="list" class="comics-table" size="small" border stripe>
+      <ElTable
+        v-loading="loading"
+        :data="list"
+        class="comics-table"
+        size="small"
+        border
+        stripe
+        style="width: 100%"
+      >
         <ElTableColumn prop="id" label="ID" width="52" align="center" />
         <ElTableColumn label="封面" width="76" align="center">
           <template #default="{ row }">
@@ -436,7 +444,7 @@ onMounted(() => {
             <span v-else class="text-gray-400">-</span>
           </template>
         </ElTableColumn>
-        <ElTableColumn prop="title" label="标题" width="128" show-overflow-tooltip />
+        <ElTableColumn prop="title" label="标题" min-width="128" show-overflow-tooltip />
         <ElTableColumn prop="author" label="作者" width="56" show-overflow-tooltip />
         <ElTableColumn label="分类" width="76">
           <template #default="{ row }">
@@ -783,6 +791,12 @@ onMounted(() => {
 </template>
 
 <style scoped>
+.comics-table {
+  width: 100%;
+}
+.comics-table :deep(.el-table__fixed-right) {
+  box-shadow: -6px 0 8px rgba(0, 0, 0, 0.06);
+}
 .comics-table :deep(.el-table__cell) {
   padding: 4px 6px;
 }
