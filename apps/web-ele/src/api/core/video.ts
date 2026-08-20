@@ -49,12 +49,13 @@ export namespace VideoApi {
       | "sort"
       | "status"
     >
-  > & { id?: number };
+  > & { id?: number; kind?: number };
 }
 
 export function getVideoListApi(params: {
   keyword?: string;
   media_code?: string;
+  kind?: number;
   status?: number;
   page?: number;
   size?: number;
@@ -82,19 +83,21 @@ export namespace MediaAssetApi {
 
 export function getMediaAssetListApi(params: {
   keyword?: string;
+  kind?: number;
   page?: number;
   size?: number;
 }) {
   return requestClient.get<MediaAssetApi.Page>("/media-assets", { params });
 }
 
-export function pickMediaAssetApi(id: string) {
-  return requestClient.post<{ id: number }>(`/media-assets/${id}/pick`);
+export function pickMediaAssetApi(id: string, kind = 0) {
+  return requestClient.post<{ id: number }>(`/media-assets/${id}/pick`, { kind });
 }
 
-export function syncMediaVideosApi() {
+export function syncMediaVideosApi(kind = 0) {
   return requestClient.post<{ created: number; updated: number; total: number }>(
     "/videos/sync-media",
+    { kind },
   );
 }
 

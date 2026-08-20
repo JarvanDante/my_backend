@@ -38,11 +38,22 @@ import {
   type VideoApi,
 } from "#/api/core/video";
 import {
+  getCartoonCategoryListApi,
+} from "#/api/core/cartoon-category";
+import {
   getVideoCategoryListApi,
   type VideoCategoryApi,
 } from "#/api/core/video-category";
 
 defineOptions({ name: "VideoManage" });
+
+const props = withDefaults(defineProps<{ mode?: "video" | "cartoon" }>(), {
+  mode: "video",
+});
+const isCartoon = computed(() => props.mode === "cartoon");
+const mediaKind = computed(() => (isCartoon.value ? 2 : 0));
+const tagType = computed(() => (isCartoon.value ? 3 : 1));
+const noun = computed(() => (isCartoon.value ? "动漫" : "视频"));
 
 const loading = ref(false);
 const list = ref<VideoApi.Item[]>([]);
@@ -57,11 +68,12 @@ const videoTags = ref<TagApi.Item[]>([]);
 const enabledVideoTags = computed(() => videoTags.value.filter((t) => t.status === 1));
 
 async function loadCategories() {
-  const res = await getVideoCategoryListApi({ status: "1", page: 1, size: 100 });
+  const api = isCartoon.value ? getCartoonCategoryListApi : getVideoCategoryListApi;
+  const res = await api({ status: "1", page: 1, size: 100 });
   categories.value = res.list || [];
 }
 async function loadVideoTags() {
-  const res = await getTagListApi({ content_type: 1, page: 1, size: 200 });
+  const res = await getTagListApi({ content_type: tagType.value, page: 1, size: 200 });
   videoTags.value = res.list || [];
 }
 function splitCategories(row: { category?: string; categories?: string[] }) {
@@ -92,6 +104,7 @@ async function loadList() {
     const res = await getVideoListApi({
       keyword: search.keyword || undefined,
       media_code: search.media_code || undefined,
+      kind: mediaKind.value,
       status: search.status,
       page: page.current,
       size: page.size,
@@ -220,7 +233,7 @@ async function save() {
     return;
   }
   if (!form.source_url && !form.media_code) {
-    ElMessage.warning("请从媒资中心选用视频");
+    ElMessage.warning(`请从媒资中心选用${noun.value}`);
     return;
   }
   if (form.status === 1 && !form.categories.length) {
@@ -231,6 +244,7 @@ async function save() {
   try {
     const payload = {
       ...form,
+      kind: mediaKind.value,
       category: form.categories.join(","),
       categories: form.categories,
       tags: form.tags || [],
@@ -246,7 +260,7 @@ async function save() {
 }
 
 async function remove(row: VideoApi.Item) {
-  await ElMessageBox.confirm(`删除视频「${row.title}」？`, "提示", {
+  await ElMessageBox.confirm(`删除${noun.value}「${row.title}」？`, "提示", {
     type: "warning",
   });
   await deleteVideoApi(row.id);
@@ -275,7 +289,7 @@ function formatDuration(sec: number) {
 async function syncMedia() {
   syncing.value = true;
   try {
-    const res = await syncMediaVideosApi();
+    const res = await syncMediaVideosApi(mediaKind.value);
     ElMessage.success(`同步完成：新增 ${res.created}，更新 ${res.updated}，媒资 ${res.total}`);
     page.current = 1;
     await loadList();
@@ -298,6 +312,7 @@ async function loadAssets() {
   try {
     const res = await getMediaAssetListApi({
       keyword: assetSearch.keyword || undefined,
+      kind: mediaKind.value,
       page: assetPage.current,
       size: assetPage.size,
     });
@@ -317,7 +332,7 @@ function openAssetDialog() {
 async function pickAsset(row: MediaAssetApi.Item) {
   pickingId.value = row.id;
   try {
-    await pickMediaAssetApi(row.id);
+    await pickMediaAssetApi(row.id, mediaKind.value);
     ElMessage.success(`已选用「${row.title || row.id}」，请编辑分类后再上架`);
     await loadAssets();
     await loadList();
@@ -364,7 +379,7 @@ onMounted(() => {
         <ElButton type="primary" @click="doSearch">查询</ElButton>
         <ElButton @click="resetSearch">重置</ElButton>
         <div class="flex-1"></div>
-        <ElButton type="primary" @click="openCreate">新增视频</ElButton>
+        <ElButton type="primary" @click="openCreate">新增{{ noun }}</ElButton>
         <ElButton type="primary" :loading="syncing" @click="syncMedia">媒资同步</ElButton>
         <ElButton @click="openAssetDialog">从媒资中心选用</ElButton>
       </div>
@@ -475,7 +490,7 @@ onMounted(() => {
 
     <ElDialog
       v-model="detailVisible"
-      title="视频详情"
+      :title="`${noun}详情`"
       width="720px"
       destroy-on-close
       @closed="detail = null"
@@ -492,13 +507,13 @@ onMounted(() => {
             :poster="detail.cover_url || undefined"
             :src="detail.source_url"
           >
-            您的浏览器不支持视频播放
+            您的浏览器不支持播放
           </video>
           <div
             v-else
             class="text-muted-foreground flex h-48 items-center justify-center text-sm"
           >
-            暂无视频资源
+            暂无播放资源
           </div>
         </div>
 
@@ -542,7 +557,7 @@ onMounted(() => {
             />
             <span v-else>-</span>
           </ElDescriptionsItem>
-          <ElDescriptionsItem label="视频地址" :span="2">
+          <ElDescriptionsItem :label="`${noun}地址`" :span="2">
             <a
               v-if="detail.source_url"
               :href="detail.source_url"
@@ -563,7 +578,7 @@ onMounted(() => {
 
     <ElDialog
       v-model="dialog"
-      :title="editing ? '编辑视频' : '新增视频'"
+      :title="editing ? `编辑${noun}` : `新增${noun}`"
       width="640px"
       destroy-on-close
     >
@@ -600,7 +615,7 @@ onMounted(() => {
             </ElUpload>
           </div>
         </ElFormItem>
-        <ElFormItem label="视频">
+        <ElFormItem :label="noun">
           <div v-if="form.source_url || form.media_code" class="w-full">
             <div v-if="form.media_code" class="text-muted-foreground mb-1 text-xs">
               媒资ID：{{ form.media_code }}
@@ -615,7 +630,7 @@ onMounted(() => {
             </a>
           </div>
           <span v-else class="text-xs text-gray-400">
-            请从媒资中心选用，子后台不支持上传视频
+            请从媒资中心选用，子后台不支持直接上传
           </span>
         </ElFormItem>
         <ElFormItem label="分类">
@@ -640,7 +655,7 @@ onMounted(() => {
           <ElSelect
             v-model="form.tags"
             class="video-multi-select"
-            placeholder="从视频标签库多选"
+            :placeholder="`从${noun}标签库多选`"
             multiple
             clearable
             filterable
@@ -678,7 +693,7 @@ onMounted(() => {
 
     <ElDialog v-model="assetDialog" title="媒资中心" width="860px" destroy-on-close>
       <p class="mb-3 text-xs text-gray-400">
-        总后台上传视频。选用后进入草稿，请在本站编辑分类后再上架。
+        总后台「{{ isCartoon ? "动漫管理" : "视频管理" }}」上传并转码。选用后进入草稿，请在本站编辑分类后再上架。
       </p>
       <div class="mb-3 flex items-center gap-2">
         <ElInput
