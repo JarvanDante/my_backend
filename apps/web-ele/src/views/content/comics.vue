@@ -40,6 +40,7 @@ import {
   getComicsCategoryListApi,
   type ComicsCategoryApi,
 } from "#/api/core/comics-category";
+import { getTagListApi, type TagApi } from "#/api/core/tag";
 
 defineOptions({ name: "ContentComics" });
 
@@ -64,10 +65,17 @@ const categories = ref<ComicsCategoryApi.Item[]>([]);
 const workCategories = computed(() =>
   categories.value.filter((c) => c.kind === 0 && c.status === 1),
 );
+const mangaTags = ref<TagApi.Item[]>([]);
+const enabledMangaTags = computed(() => mangaTags.value.filter((t) => t.status === 1));
 
 async function loadCategories() {
   const res = await getComicsCategoryListApi({ status: "1", page: 1, size: 100 });
   categories.value = res.list || [];
+}
+
+async function loadMangaTags() {
+  const res = await getTagListApi({ content_type: 4, page: 1, size: 200 });
+  mangaTags.value = res.list || [];
 }
 
 async function fetchList() {
@@ -102,7 +110,7 @@ const dialog = ref(false);
 const isEdit = ref(false);
 const saving = ref(false);
 const formRef = ref();
-const emptyForm = (): ComicsApi.SaveBody & { id: number; tagText: string; categories: string[] } => ({
+const emptyForm = (): ComicsApi.SaveBody & { id: number; categories: string[] } => ({
   id: 0,
   title: "",
   author: "",
@@ -111,7 +119,6 @@ const emptyForm = (): ComicsApi.SaveBody & { id: number; tagText: string; catego
   category: "",
   categories: [],
   tags: [],
-  tagText: "",
   is_vip: 0,
   price: 0,
   free_chapter: 1,
@@ -151,7 +158,6 @@ function openEdit(row: ComicsApi.Item) {
     category: row.category,
     categories: splitCategories(row),
     tags: row.tags || [],
-    tagText: (row.tags || []).join(","),
     is_vip: row.is_vip,
     price: row.price,
     free_chapter: row.free_chapter,
@@ -181,9 +187,7 @@ async function handleSave() {
     intro: form.intro,
     category: form.categories.join(","),
     categories: form.categories,
-    tags: form.tagText
-      ? form.tagText.split(/[,，]/).map((s) => s.trim()).filter(Boolean)
-      : [],
+    tags: form.tags || [],
     is_vip: form.is_vip,
     price: Number(form.price) || 0,
     free_chapter: Number(form.free_chapter) || 0,
@@ -376,6 +380,7 @@ async function pickAsset(row: MediaComicsApi.Item) {
 
 onMounted(() => {
   loadCategories().catch(() => undefined);
+  loadMangaTags().catch(() => undefined);
   fetchList();
 });
 </script>
@@ -548,7 +553,25 @@ onMounted(() => {
           </ElSelect>
         </ElFormItem>
         <ElFormItem label="标签">
-          <ElInput v-model="form.tagText" placeholder="多个标签用逗号分隔" />
+          <ElSelect
+            v-model="form.tags"
+            placeholder="从漫画标签库多选"
+            multiple
+            collapse-tags
+            collapse-tags-tooltip
+            clearable
+            filterable
+            allow-create
+            default-first-option
+            style="width: 280px"
+          >
+            <ElOption
+              v-for="t in enabledMangaTags"
+              :key="t.id"
+              :label="t.name"
+              :value="t.name"
+            />
+          </ElSelect>
         </ElFormItem>
         <ElFormItem label="付费方式">
           <ElSelect v-model="form.is_vip" style="width: 160px">
