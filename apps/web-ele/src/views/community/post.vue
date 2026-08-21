@@ -25,6 +25,14 @@ import {
   getPostListApi,
   type PostApi,
 } from "#/api/core/post";
+import { adminMediaUrl } from "#/utils/media";
+
+function picUrl(src?: string) {
+  return adminMediaUrl(src);
+}
+function picList(pics?: string[]) {
+  return (pics || []).map((p) => adminMediaUrl(p)).filter(Boolean);
+}
 
 defineOptions({ name: "CommunityPost" });
 
@@ -120,6 +128,18 @@ function openDetail(row: PostApi.Item) {
   detailDialog.value = true;
 }
 
+const videoDialog = ref(false);
+const playingUrl = ref("");
+function openVideo(url?: string) {
+  if (!url) return;
+  playingUrl.value = url;
+  videoDialog.value = true;
+}
+function closeVideo() {
+  videoDialog.value = false;
+  playingUrl.value = "";
+}
+
 // ---------- 删除 ----------
 async function handleDelete(row: PostApi.Item) {
   // 后端是硬删且连带评论一起删, 没有回收站, 所以提示写明白
@@ -175,15 +195,27 @@ onMounted(fetchList);
         <ElTableColumn prop="user_id" label="用户ID" width="90" />
         <ElTableColumn label="图片" width="80">
           <template #default="{ row }">
-            <!-- 列表只显示第一张, 点开可预览全部 pics -->
             <ElImage
               v-if="row.pics && row.pics.length > 0"
-              :src="row.pics[0]"
+              :src="picUrl(row.pics[0])"
               fit="cover"
               style="width: 44px; height: 44px"
               preview-teleported
-              :preview-src-list="row.pics"
+              :preview-src-list="picList(row.pics)"
             />
+            <span v-else class="text-gray-400">-</span>
+          </template>
+        </ElTableColumn>
+        <ElTableColumn label="视频" width="90" align="center">
+          <template #default="{ row }">
+            <ElButton
+              v-if="row.video_url"
+              link
+              type="primary"
+              @click="openVideo(row.video_url)"
+            >
+              播放
+            </ElButton>
             <span v-else class="text-gray-400">-</span>
           </template>
         </ElTableColumn>
@@ -302,19 +334,29 @@ onMounted(fetchList);
         <ElFormItem label="图片">
           <div class="flex flex-wrap gap-2">
             <ElImage
-              v-for="(p, i) in detail.pics || []"
+              v-for="(p, i) in picList(detail.pics)"
               :key="i"
               :src="p"
               fit="cover"
               style="width: 90px; height: 90px"
               preview-teleported
-              :preview-src-list="detail.pics"
+              :preview-src-list="picList(detail.pics)"
               :initial-index="i"
             />
             <span v-if="!detail.pics || detail.pics.length === 0" class="text-gray-400">
               无
             </span>
           </div>
+        </ElFormItem>
+        <ElFormItem label="视频">
+          <ElButton
+            v-if="detail.video_url"
+            type="primary"
+            @click="openVideo(detail.video_url)"
+          >
+            播放视频
+          </ElButton>
+          <span v-else class="text-gray-400">无</span>
         </ElFormItem>
         <ElFormItem label="拒绝原因">
           {{ detail.reject_reason || "-" }}
@@ -324,6 +366,29 @@ onMounted(fetchList);
       <template #footer>
         <ElButton @click="detailDialog = false">关闭</ElButton>
       </template>
+    </ElDialog>
+
+    <ElDialog
+      v-model="videoDialog"
+      title="播放视频"
+      width="720px"
+      destroy-on-close
+      @closed="closeVideo"
+    >
+      <div class="overflow-hidden rounded bg-black">
+        <video
+          v-if="playingUrl"
+          :key="playingUrl"
+          class="max-h-[480px] w-full"
+          controls
+          autoplay
+          playsinline
+          preload="metadata"
+          :src="playingUrl"
+        >
+          您的浏览器不支持播放
+        </video>
+      </div>
     </ElDialog>
   </div>
 </template>

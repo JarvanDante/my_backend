@@ -18,6 +18,8 @@ export namespace PostApi {
     title: string;
     content: string;
     pics: string[];
+    topics?: string[];
+    video_url?: string;
     media_id: number;
     view_count: number;
     like_count: number;
