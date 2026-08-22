@@ -147,7 +147,7 @@ function closeVideo() {
 const categoryOpts = ref<{ name: string }[]>([]);
 const editDialog = ref(false);
 const saving = ref(false);
-const editForm = reactive({ id: 0, title: "", category: "", view_count: 0 });
+const editForm = reactive({ id: 0, title: "", category: "", view_count: 0, rank: 0 });
 
 async function loadCategories() {
   try {
@@ -164,6 +164,7 @@ function openEdit(row: PostApi.Item) {
     title: row.title,
     category: row.category || "",
     view_count: row.view_count || 0,
+    rank: row.rank || 0,
   });
   editDialog.value = true;
 }
@@ -174,6 +175,7 @@ async function submitEdit() {
     await updatePostApi(editForm.id, {
       category: editForm.category,
       view_count: Number(editForm.view_count) || 0,
+      rank: Number(editForm.rank) || 0,
     });
     ElMessage.success("已保存");
     editDialog.value = false;
@@ -287,6 +289,7 @@ onMounted(() => {
             {{ row.category || "-" }}
           </template>
         </ElTableColumn>
+        <ElTableColumn prop="rank" label="权重" width="80" align="center" />
         <ElTableColumn prop="view_count" label="浏览" width="80" align="center" />
         <ElTableColumn prop="like_count" label="点赞" width="80" align="center" />
         <ElTableColumn
@@ -391,6 +394,10 @@ onMounted(() => {
         </ElFormItem>
         <ElFormItem label="浏览量">
           <ElInputNumber v-model="editForm.view_count" :min="0" :step="1" />
+        </ElFormItem>
+        <ElFormItem label="权重">
+          <ElInputNumber v-model="editForm.rank" :min="0" :step="1" />
+          <span class="ml-2 text-xs text-gray-400">数值越大 H5 越靠前</span>
         </ElFormItem>
       </ElForm>
       <template #footer>
