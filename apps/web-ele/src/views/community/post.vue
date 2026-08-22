@@ -9,6 +9,7 @@ import {
   ElFormItem,
   ElImage,
   ElInput,
+  ElInputNumber,
   ElMessage,
   ElMessageBox,
   ElOption,
@@ -23,8 +24,10 @@ import {
   auditPostApi,
   deletePostApi,
   getPostListApi,
+  updatePostApi,
   type PostApi,
 } from "#/api/core/post";
+import { getPostCategoryListApi } from "#/api/core/post-category";
 import { adminMediaUrl } from "#/utils/media";
 
 function picUrl(src?: string) {
@@ -140,6 +143,46 @@ function closeVideo() {
   playingUrl.value = "";
 }
 
+// ---------- 编辑分类 / 浏览量 ----------
+const categoryOpts = ref<{ name: string }[]>([]);
+const editDialog = ref(false);
+const saving = ref(false);
+const editForm = reactive({ id: 0, title: "", category: "", view_count: 0 });
+
+async function loadCategories() {
+  try {
+    const res = await getPostCategoryListApi({ status: "1", page: 1, size: 100 });
+    categoryOpts.value = (res.list || []).map((r) => ({ name: r.name }));
+  } catch {
+    categoryOpts.value = [];
+  }
+}
+
+function openEdit(row: PostApi.Item) {
+  Object.assign(editForm, {
+    id: row.id,
+    title: row.title,
+    category: row.category || "",
+    view_count: row.view_count || 0,
+  });
+  editDialog.value = true;
+}
+
+async function submitEdit() {
+  saving.value = true;
+  try {
+    await updatePostApi(editForm.id, {
+      category: editForm.category,
+      view_count: Number(editForm.view_count) || 0,
+    });
+    ElMessage.success("已保存");
+    editDialog.value = false;
+    fetchList();
+  } finally {
+    saving.value = false;
+  }
+}
+
 // ---------- 删除 ----------
 async function handleDelete(row: PostApi.Item) {
   // 后端是硬删且连带评论一起删, 没有回收站, 所以提示写明白
@@ -153,7 +196,10 @@ async function handleDelete(row: PostApi.Item) {
   fetchList();
 }
 
-onMounted(fetchList);
+onMounted(() => {
+  loadCategories();
+  fetchList();
+});
 </script>
 
 <template>
@@ -236,6 +282,11 @@ onMounted(fetchList);
           min-width="220"
           show-overflow-tooltip
         />
+        <ElTableColumn prop="category" label="分类" width="110" show-overflow-tooltip>
+          <template #default="{ row }">
+            {{ row.category || "-" }}
+          </template>
+        </ElTableColumn>
         <ElTableColumn prop="view_count" label="浏览" width="80" align="center" />
         <ElTableColumn prop="like_count" label="点赞" width="80" align="center" />
         <ElTableColumn
@@ -258,9 +309,10 @@ onMounted(fetchList);
           show-overflow-tooltip
         />
         <ElTableColumn prop="created_at" label="创建时间" width="170" />
-        <ElTableColumn label="操作" width="220" fixed="right">
+        <ElTableColumn label="操作" width="260" fixed="right">
           <template #default="{ row }">
             <ElButton link type="primary" @click="openDetail(row)">详情</ElButton>
+            <ElButton link type="primary" @click="openEdit(row)">编辑</ElButton>
             <!-- 后端 Audit 带 `Where("status", 0)` 守卫, 审核过再点会报"已审核过",
                  所以非待审状态直接不给按钮, 别让运营白点 -->
             <ElButton
@@ -319,6 +371,31 @@ onMounted(fetchList);
         <ElButton type="danger" :loading="rejecting" @click="submitReject">
           确认拒绝
         </ElButton>
+      </template>
+    </ElDialog>
+
+    <ElDialog v-model="editDialog" title="编辑帖子" width="480px">
+      <ElForm :model="editForm" label-width="80px">
+        <ElFormItem label="帖子">
+          <span>{{ editForm.title || editForm.id }}</span>
+        </ElFormItem>
+        <ElFormItem label="分类">
+          <ElSelect v-model="editForm.category" clearable placeholder="请选择分类" style="width: 220px">
+            <ElOption
+              v-for="o in categoryOpts"
+              :key="o.name"
+              :label="o.name"
+              :value="o.name"
+            />
+          </ElSelect>
+        </ElFormItem>
+        <ElFormItem label="浏览量">
+          <ElInputNumber v-model="editForm.view_count" :min="0" :step="1" />
+        </ElFormItem>
+      </ElForm>
+      <template #footer>
+        <ElButton @click="editDialog = false">取消</ElButton>
+        <ElButton type="primary" :loading="saving" @click="submitEdit">保存</ElButton>
       </template>
     </ElDialog>
 

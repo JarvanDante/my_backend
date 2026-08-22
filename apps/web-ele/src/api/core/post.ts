@@ -19,6 +19,7 @@ export namespace PostApi {
     content: string;
     pics: string[];
     topics?: string[];
+    category?: string;
     video_url?: string;
     media_id: number;
     view_count: number;
@@ -55,6 +56,13 @@ export function getPostListApi(params: PostApi.ListParams) {
  */
 export function auditPostApi(id: number, pass: boolean, reason = "") {
   return requestClient.post(`/post/${id}/audit`, { id, pass, reason });
+}
+
+export function updatePostApi(
+  id: number,
+  body: { category?: string; view_count: number },
+) {
+  return requestClient.put(`/post/${id}`, { ...body, id });
 }
 
 /** 硬删除(连带评论)，不可恢复 */
