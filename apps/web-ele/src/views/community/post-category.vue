@@ -33,7 +33,6 @@ const kindOpts = [
   { label: "普通分类", value: 0 },
   { label: "新更", value: 1 },
   { label: "推荐", value: 2 },
-  { label: "榜单", value: 3 },
 ];
 const kindMap: Record<number, string> = Object.fromEntries(
   kindOpts.map((o) => [o.value, o.label]),
@@ -216,7 +215,7 @@ onMounted(fetchList);
           </ElSelect>
         </ElFormItem>
         <p class="mb-3 ml-[90px] text-xs text-gray-400">
-          普通分类会出现在 H5 顶栏, 也可给帖子打标; 新更/推荐/榜单只占栏位, 不作为作品分类。
+          普通分类会出现在 H5 顶栏, 也可给帖子打标; 新更/推荐只占栏位, 不作为作品分类。
         </p>
         <ElFormItem label="排序权重">
           <ElInputNumber v-model="form.rank" :min="0" />
