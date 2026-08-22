@@ -22,30 +22,39 @@ import {
 } from "element-plus";
 
 import {
-  type ApplicationApi,
-  createApplicationApi,
-  deleteApplicationApi,
-  getApplicationListApi,
-  updateApplicationApi,
-} from "#/api/core/application";
+  type GroupApi,
+  createGroupApi,
+  deleteGroupApi,
+  getGroupListApi,
+  updateGroupApi,
+} from "#/api/core/group";
 
-defineOptions({ name: "OpsApplication" });
+defineOptions({ name: "OpsGroup" });
 
 const loading = ref(false);
-const list = ref<ApplicationApi.Item[]>([]);
+const list = ref<GroupApi.Item[]>([]);
 const page = reactive({ current: 1, size: 20, total: 0 });
-// status 保持 string: 空串=全部(后端 statusOf("")=-1), 传 0 会被当成"只看下架"
 const search = reactive({ status: "", keyword: "" });
 const statusOpts = [
   { label: "全部", value: "" },
   { label: "下架", value: "0" },
   { label: "上架", value: "1" },
 ];
+const platformOpts = [
+  { label: "Telegram", value: "telegram" },
+  { label: "QQ", value: "qq" },
+  { label: "微信", value: "wechat" },
+  { label: "Discord", value: "discord" },
+  { label: "其他", value: "other" },
+];
+
+const platformLabel = (v: string) =>
+  platformOpts.find((o) => o.value === v)?.label || v || "-";
 
 async function fetchList() {
   loading.value = true;
   try {
-    const res = await getApplicationListApi({
+    const res = await getGroupListApi({
       status: search.status,
       keyword: search.keyword || undefined,
       page: page.current,
@@ -74,20 +83,17 @@ const formRef = ref();
 const emptyForm = () => ({
   id: 0,
   name: "",
-  tag: 0,
   intro: "",
   avatar: "",
-  download_url: "",
-  ios_url: "",
-  android_url: "",
-  // loc_ids 是 jsonb 数组, 表单用逗号分隔文本承接, 提交时解析成 number[]
-  locText: "",
+  link: "",
+  platform: "telegram",
   rank: 0,
   status: 1,
 });
 const form = reactive(emptyForm());
 const rules = {
-  name: [{ required: true, message: "应用名必填", trigger: "blur" }],
+  name: [{ required: true, message: "社群名必填", trigger: "blur" }],
+  link: [{ required: true, message: "跳转链接必填", trigger: "blur" }],
 };
 
 function openCreate() {
@@ -95,18 +101,15 @@ function openCreate() {
   Object.assign(form, emptyForm());
   dialog.value = true;
 }
-function openEdit(row: ApplicationApi.Item) {
+function openEdit(row: GroupApi.Item) {
   isEdit.value = true;
   Object.assign(form, {
     id: row.id,
     name: row.name,
-    tag: row.tag,
     intro: row.intro,
     avatar: row.avatar,
-    download_url: row.download_url,
-    ios_url: row.ios_url,
-    android_url: row.android_url,
-    locText: (row.loc_ids || []).join(","),
+    link: row.link,
+    platform: row.platform || "other",
     rank: row.rank,
     status: row.status,
   });
@@ -115,30 +118,22 @@ function openEdit(row: ApplicationApi.Item) {
 
 async function handleSave() {
   await formRef.value?.validate();
-  const loc_ids = form.locText
-    .split(/[,，\s]+/)
-    .map((s) => Number(s.trim()))
-    .filter((n) => Number.isFinite(n) && n > 0);
-  const body: ApplicationApi.SaveBody = {
+  const body: GroupApi.SaveBody = {
     name: form.name,
-    tag: Number(form.tag) || 0,
     intro: form.intro,
     avatar: form.avatar,
-    download_url: form.download_url,
-    ios_url: form.ios_url,
-    android_url: form.android_url,
-    // 后端对 loc_ids 是无条件覆盖(locJSON 直接写), 所以每次都要提交完整数组
-    loc_ids,
+    link: form.link,
+    platform: form.platform,
     rank: Number(form.rank) || 0,
     status: form.status,
   };
   saving.value = true;
   try {
     if (isEdit.value) {
-      await updateApplicationApi(form.id, body);
+      await updateGroupApi(form.id, body);
       ElMessage.success("已保存");
     } else {
-      await createApplicationApi(body);
+      await createGroupApi(body);
       ElMessage.success("已新增");
     }
     dialog.value = false;
@@ -148,13 +143,11 @@ async function handleSave() {
   }
 }
 
-async function handleDelete(row: ApplicationApi.Item) {
-  await ElMessageBox.confirm(
-    `确认删除福利应用「${row.name}」? 前台将不再展示该应用。`,
-    "提示",
-    { type: "warning" },
-  );
-  await deleteApplicationApi(row.id);
+async function handleDelete(row: GroupApi.Item) {
+  await ElMessageBox.confirm(`确认删除官方社群「${row.name}」?`, "提示", {
+    type: "warning",
+  });
+  await deleteGroupApi(row.id);
   ElMessage.success("已删除");
   fetchList();
 }
@@ -176,7 +169,7 @@ onMounted(fetchList);
         </ElSelect>
         <ElInput
           v-model="search.keyword"
-          placeholder="应用名关键字"
+          placeholder="社群名关键字"
           style="width: 220px"
           clearable
           @keyup.enter="doSearch"
@@ -184,7 +177,7 @@ onMounted(fetchList);
         <ElButton type="primary" @click="doSearch">查询</ElButton>
         <ElButton @click="resetSearch">重置</ElButton>
         <div class="flex-1"></div>
-        <ElButton type="primary" @click="openCreate">新增福利应用</ElButton>
+        <ElButton type="primary" @click="openCreate">新增社群</ElButton>
       </div>
 
       <ElTable v-loading="loading" :data="list" border stripe>
@@ -202,37 +195,27 @@ onMounted(fetchList);
             <span v-else class="text-gray-400">-</span>
           </template>
         </ElTableColumn>
-        <ElTableColumn prop="name" label="应用名" min-width="140" show-overflow-tooltip />
+        <ElTableColumn prop="name" label="社群名" min-width="140" show-overflow-tooltip />
         <ElTableColumn prop="intro" label="简介" min-width="180" show-overflow-tooltip />
-        <ElTableColumn prop="tag" label="标签" width="80" align="center" />
-        <ElTableColumn label="下载地址" min-width="200">
+        <ElTableColumn label="平台" width="110" align="center">
+          <template #default="{ row }">
+            <ElTag size="small">{{ platformLabel(row.platform) }}</ElTag>
+          </template>
+        </ElTableColumn>
+        <ElTableColumn label="跳转链接" min-width="220">
           <template #default="{ row }">
             <ElLink
-              v-if="row.download_url"
-              :href="row.download_url"
+              v-if="row.link"
+              :href="row.link"
               type="primary"
               target="_blank"
               class="truncate"
             >
-              {{ row.download_url }}
+              {{ row.link }}
             </ElLink>
             <span v-else class="text-gray-400">-</span>
           </template>
         </ElTableColumn>
-        <ElTableColumn label="投放位置" width="140">
-          <template #default="{ row }">
-            <ElTag
-              v-for="loc in row.loc_ids || []"
-              :key="loc"
-              size="small"
-              class="mr-1"
-            >
-              {{ loc }}
-            </ElTag>
-            <span v-if="!(row.loc_ids || []).length" class="text-gray-400">-</span>
-          </template>
-        </ElTableColumn>
-        <ElTableColumn prop="down_total" label="下载数" width="90" align="center" />
         <ElTableColumn prop="rank" label="权重" width="80" align="center" />
         <ElTableColumn label="状态" width="90" align="center">
           <template #default="{ row }">
@@ -263,15 +246,20 @@ onMounted(fetchList);
       </div>
     </ElCard>
 
-    <!-- 应用表单 -->
-    <ElDialog
-      v-model="dialog"
-      :title="isEdit ? '编辑福利应用' : '新增福利应用'"
-      width="600px"
-    >
+    <ElDialog v-model="dialog" :title="isEdit ? '编辑官方社群' : '新增官方社群'" width="560px">
       <ElForm ref="formRef" :model="form" :rules="rules" label-width="100px">
-        <ElFormItem label="应用名" prop="name">
+        <ElFormItem label="社群名" prop="name">
           <ElInput v-model="form.name" />
+        </ElFormItem>
+        <ElFormItem label="平台">
+          <ElSelect v-model="form.platform" style="width: 200px">
+            <ElOption
+              v-for="o in platformOpts"
+              :key="o.value"
+              :label="o.label"
+              :value="o.value"
+            />
+          </ElSelect>
         </ElFormItem>
         <ElFormItem label="图标">
           <ElInput v-model="form.avatar" placeholder="图片 URL" />
@@ -279,28 +267,12 @@ onMounted(fetchList);
         <ElFormItem label="简介">
           <ElInput v-model="form.intro" type="textarea" :rows="3" />
         </ElFormItem>
-        <ElFormItem label="标签">
-          <ElInputNumber v-model="form.tag" :min="0" />
-          <span class="ml-2 text-xs text-gray-400">自定义分类编号, 0 = 无</span>
-        </ElFormItem>
-        <ElFormItem label="通用下载">
-          <ElInput v-model="form.download_url" placeholder="通用下载地址" />
-        </ElFormItem>
-        <ElFormItem label="iOS 地址">
-          <ElInput v-model="form.ios_url" placeholder="可选" />
-        </ElFormItem>
-        <ElFormItem label="安卓地址">
-          <ElInput v-model="form.android_url" placeholder="可选" />
-        </ElFormItem>
-        <ElFormItem label="投放位置">
-          <ElInput v-model="form.locText" placeholder="位置ID, 多个用逗号分隔, 如: 1,2" />
+        <ElFormItem label="跳转链接" prop="link">
+          <ElInput v-model="form.link" placeholder="https://" />
         </ElFormItem>
         <ElFormItem label="排序权重">
           <ElInputNumber v-model="form.rank" :min="0" />
           <span class="ml-2 text-xs text-gray-400">越大越靠前</span>
-        </ElFormItem>
-        <ElFormItem v-if="isEdit" label="下载数">
-          <span class="text-gray-500">由前台点击上报累加, 后台不可改</span>
         </ElFormItem>
         <ElFormItem label="状态">
           <ElSelect v-model="form.status" style="width: 160px">
