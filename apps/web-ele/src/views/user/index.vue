@@ -38,6 +38,7 @@ import {
 } from "#/api/core/bkuser";
 import { getGroupListApi, type BkGroupApi } from "#/api/core/bkgroup";
 import { adminMediaUrl } from "#/utils/media";
+import { encodeId, parseAdminId } from "#/utils/idcrypt";
 
 defineOptions({ name: "UserManage" });
 
@@ -131,11 +132,11 @@ function imgSrc(img: string) {
 async function fetchList() {
   loading.value = true;
   try {
-    const userId = Number(searchForm.user_id);
-    const parentId = Number(searchForm.parent_id);
+    const userId = parseAdminId(searchForm.user_id) || parseAdminId(searchForm.username);
+    const parentId = parseAdminId(searchForm.parent_id);
     const res = await getUserListApi({
       user_id: userId > 0 ? userId : undefined,
-      username: searchForm.username || undefined,
+      username: userId > 0 ? undefined : searchForm.username || undefined,
       phone: searchForm.phone || undefined,
       parent_id: parentId > 0 ? parentId : undefined,
       channel: searchForm.channel || undefined,
@@ -186,7 +187,7 @@ async function openLoginQr(row: BkUserApi.UserItem) {
     ElMessage.warning("无登录凭证");
     return;
   }
-  qrUsername.value = row.username;
+  qrUsername.value = encodeId(row.id) || row.username;
   qrText.value = row.account_slat;
   qrVisible.value = true;
   await nextTick();
@@ -485,7 +486,7 @@ onMounted(async () => {
         <ElTableColumn label="用户ID" width="120" align="center">
           <template #default="{ row }">
             <div>{{ row.id }}</div>
-            <div class="text-muted-foreground text-xs">{{ row.username }}</div>
+            <div class="text-muted-foreground text-xs">{{ encodeId(row.id) || row.username }}</div>
           </template>
         </ElTableColumn>
         <ElTableColumn label="昵称" width="140" align="center">
@@ -609,7 +610,7 @@ onMounted(async () => {
       <div v-if="detail">
         <ElDescriptions :column="2" border size="small">
           <ElDescriptionsItem label="ID">{{ detail.id }}</ElDescriptionsItem>
-          <ElDescriptionsItem label="用户名">{{ detail.username }}</ElDescriptionsItem>
+          <ElDescriptionsItem label="用户名">{{ encodeId(detail.id) || detail.username }}</ElDescriptionsItem>
           <ElDescriptionsItem label="昵称">{{ detail.nickname }}</ElDescriptionsItem>
           <ElDescriptionsItem label="手机">{{ detail.phone || "-" }}</ElDescriptionsItem>
           <ElDescriptionsItem label="性别">{{ sexLabel(detail.sex) }}</ElDescriptionsItem>
@@ -624,7 +625,7 @@ onMounted(async () => {
           <ElDescriptionsItem label="有效用户">{{ detail.is_valid === 1 ? "是" : "否" }}</ElDescriptionsItem>
           <ElDescriptionsItem label="渠道">{{ detail.channel || "-" }}</ElDescriptionsItem>
           <ElDescriptionsItem label="推荐人">
-            {{ detail.parent_name || detail.parent_id || "-" }}
+            {{ detail.parent_id ? encodeId(detail.parent_id) || detail.parent_name : "-" }}
           </ElDescriptionsItem>
           <ElDescriptionsItem label="粉丝/关注">{{ detail.fans }}/{{ detail.follow }}</ElDescriptionsItem>
           <ElDescriptionsItem label="分享人数">{{ detail.share_num }}</ElDescriptionsItem>
