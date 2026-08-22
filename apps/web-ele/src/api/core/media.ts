@@ -36,39 +36,12 @@ export namespace MediaApi {
   }
 }
 
-/** 小文件/封面：走统一存储，写入桶 my-storage */
-export async function uploadMediaApi(file: File, purpose = "cover") {
-  const init = await requestClient.post<{
-    id: string;
-    upload_url: string;
-    object_key: string;
-    bucket: string;
-  }>("/media/storage/init", {
-    filename: file.name || "image.jpg",
+/** 封面/图片：本站加密成 .bnc 后写入统一存储 my-storage */
+export function uploadMediaApi(file: File, purpose = "cover") {
+  return requestClient.upload<MediaApi.UploadResult>("/media/upload", {
+    file,
     purpose,
-    content_type: file.type || "",
-    size: file.size,
   });
-  const put = await fetch(init.upload_url, { method: "PUT", body: file });
-  if (!put.ok) {
-    throw new Error(`统一存储直传失败(${put.status})`);
-  }
-  const done = await requestClient.post<{
-    id: string;
-    url: string;
-    object_key: string;
-    bucket: string;
-    size: number;
-  }>("/media/storage/confirm", { id: init.id });
-  return {
-    id: 0,
-    url: done.url,
-    object_key: done.object_key || init.object_key || init.id,
-    bucket: done.bucket || init.bucket || "my-storage",
-    purpose,
-    content_type: file.type || "",
-    size: done.size || file.size,
-  } satisfies MediaApi.UploadResult;
 }
 
 export function multipartInitApi(p: {
