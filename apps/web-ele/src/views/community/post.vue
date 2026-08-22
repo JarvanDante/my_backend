@@ -101,13 +101,22 @@ async function handlePass(row: PostApi.Item) {
 
 const rejectDialog = ref(false);
 const rejecting = ref(false);
+const rejectFormRef = ref();
 const rejectForm = reactive({ id: 0, title: "", reason: "" });
+const rejectRules = {
+  reason: [{ required: true, message: "请填写拒绝原因", trigger: "blur" }],
+};
 
 function openReject(row: PostApi.Item) {
   Object.assign(rejectForm, { id: row.id, title: row.title, reason: "" });
   rejectDialog.value = true;
 }
 async function submitReject() {
+  try {
+    await rejectFormRef.value?.validate();
+  } catch {
+    return;
+  }
   if (!rejectForm.reason.trim()) {
     ElMessage.warning("请填写拒绝原因, 用户端会看到这段话");
     return;
@@ -356,11 +365,11 @@ onMounted(() => {
 
     <!-- 拒绝原因 -->
     <ElDialog v-model="rejectDialog" title="拒绝帖子" width="520px">
-      <ElForm :model="rejectForm" label-width="80px">
+      <ElForm ref="rejectFormRef" :model="rejectForm" :rules="rejectRules" label-width="80px">
         <ElFormItem label="帖子">
           <span>{{ rejectForm.title }}</span>
         </ElFormItem>
-        <ElFormItem label="拒绝原因">
+        <ElFormItem label="拒绝原因" prop="reason" required>
           <ElInput
             v-model="rejectForm.reason"
             type="textarea"
@@ -371,7 +380,12 @@ onMounted(() => {
       </ElForm>
       <template #footer>
         <ElButton @click="rejectDialog = false">取消</ElButton>
-        <ElButton type="danger" :loading="rejecting" @click="submitReject">
+        <ElButton
+          type="danger"
+          :loading="rejecting"
+          :disabled="!rejectForm.reason.trim()"
+          @click="submitReject"
+        >
           确认拒绝
         </ElButton>
       </template>
