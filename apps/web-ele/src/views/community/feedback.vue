@@ -44,6 +44,14 @@ const statusMap: Record<number, { text: string; type: "success" | "warning" }> =
   2: { text: "已处理", type: "success" },
 };
 const typeMap: Record<number, string> = { 1: "用户反馈", 2: "程序反馈" };
+const problemTypeMap: Record<number, string> = {
+  1: "功能建议",
+  2: "内容问题",
+  3: "支付问题",
+  4: "账号问题",
+  5: "播放卡顿",
+  6: "其他",
+};
 
 const loading = ref(false);
 const list = ref<FeedbackApi.Item[]>([]);
@@ -155,12 +163,11 @@ onMounted(fetchList);
             {{ typeMap[row.type] ?? row.type }}
           </template>
         </ElTableColumn>
-        <ElTableColumn
-          prop="problem_type"
-          label="问题类型"
-          width="90"
-          align="center"
-        />
+        <ElTableColumn label="问题类型" width="100" align="center">
+          <template #default="{ row }">
+            {{ problemTypeMap[row.problem_type] ?? row.problem_type }}
+          </template>
+        </ElTableColumn>
         <ElTableColumn
           prop="content"
           label="反馈内容"
@@ -258,8 +265,8 @@ onMounted(fetchList);
         <ElFormItem label="ID">{{ detail.id }}</ElFormItem>
         <ElFormItem label="用户ID">{{ detail.user_id }}</ElFormItem>
         <ElFormItem label="类型">
-          {{ typeMap[detail.type] ?? detail.type }} / 问题类型
-          {{ detail.problem_type }}
+          {{ typeMap[detail.type] ?? detail.type }} /
+          {{ problemTypeMap[detail.problem_type] ?? detail.problem_type }}
         </ElFormItem>
         <ElFormItem label="内容">
           <div class="whitespace-pre-wrap">{{ detail.content }}</div>
