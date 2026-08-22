@@ -23,6 +23,7 @@ export namespace PostApi {
     video_url?: string;
     media_id: number;
     view_count: number;
+    rank?: number;
     like_count: number;
     comment_count: number;
     /** 0待审核 1已通过 2已拒绝 3用户删除 */
@@ -60,7 +61,7 @@ export function auditPostApi(id: number, pass: boolean, reason = "") {
 
 export function updatePostApi(
   id: number,
-  body: { category?: string; view_count: number },
+  body: { category?: string; view_count: number; rank?: number },
 ) {
   return requestClient.put(`/post/${id}`, { ...body, id });
 }
