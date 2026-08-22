@@ -36,13 +36,39 @@ export namespace MediaApi {
   }
 }
 
-/** 小文件/封面整传 */
-export function uploadMediaApi(file: File, purpose = "cover") {
-  // 走专用 upload, 并清掉默认 application/json, 让浏览器带 multipart boundary
-  return requestClient.upload<MediaApi.UploadResult>("/media/upload", {
-    file,
+/** 小文件/封面：走统一存储，写入桶 my-storage */
+export async function uploadMediaApi(file: File, purpose = "cover") {
+  const init = await requestClient.post<{
+    id: string;
+    upload_url: string;
+    object_key: string;
+    bucket: string;
+  }>("/media/storage/init", {
+    filename: file.name || "image.jpg",
     purpose,
+    content_type: file.type || "",
+    size: file.size,
   });
+  const put = await fetch(init.upload_url, { method: "PUT", body: file });
+  if (!put.ok) {
+    throw new Error(`统一存储直传失败(${put.status})`);
+  }
+  const done = await requestClient.post<{
+    id: string;
+    url: string;
+    object_key: string;
+    bucket: string;
+    size: number;
+  }>("/media/storage/confirm", { id: init.id });
+  return {
+    id: 0,
+    url: done.url,
+    object_key: done.object_key || init.object_key || init.id,
+    bucket: done.bucket || init.bucket || "my-storage",
+    purpose,
+    content_type: file.type || "",
+    size: done.size || file.size,
+  } satisfies MediaApi.UploadResult;
 }
 
 export function multipartInitApi(p: {
