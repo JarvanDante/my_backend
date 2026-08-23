@@ -13,7 +13,7 @@ export namespace RanksApi {
   export interface HotItem {
     id: number;
     keyword: string;
-    /** 投放分类: 空=通用, comic/cartoon/novel/short/video */
+    /** 投放分类: 空=通用, comic/cartoon/novel/short/video/planet(社区) */
     category: string;
     /** 人工权重: 运营手动设的排序分, 排序第一优先级 */
     heat: number;
