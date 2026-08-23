@@ -39,16 +39,34 @@ const statusOpts = [
   { label: "禁用", value: "0" },
 ];
 
+const categoryOpts = [
+  { label: "全部分类", value: "" },
+  { label: "通用", value: "_common" },
+  { label: "漫画", value: "comic" },
+  { label: "动漫", value: "cartoon" },
+  { label: "小说", value: "novel" },
+  { label: "短剧", value: "short" },
+  { label: "视频", value: "video" },
+];
+
+const formCategoryOpts = categoryOpts.filter((o) => o.value !== "");
+
+const categoryLabel = (code?: string) => {
+  if (!code) return "通用";
+  return formCategoryOpts.find((o) => o.value === code)?.label || code;
+};
+
 const loading = ref(false);
 const list = ref<RanksApi.HotItem[]>([]);
 const page = reactive({ current: 1, size: 20, total: 0 });
-const search = reactive({ status: "", keyword: "" });
+const search = reactive({ status: "", category: "", keyword: "" });
 
 async function fetchList() {
   loading.value = true;
   try {
     const res = await getHotSearchListApi({
       status: search.status,
+      category: search.category || undefined,
       keyword: search.keyword || undefined,
       page: page.current,
       size: page.size,
@@ -65,6 +83,7 @@ function doSearch() {
 }
 function resetSearch() {
   search.status = "";
+  search.category = "";
   search.keyword = "";
   doSearch();
 }
@@ -88,10 +107,11 @@ const dialog = ref(false);
 const isEdit = ref(false);
 const saving = ref(false);
 const formRef = ref();
-const emptyForm = () => ({ id: 0, keyword: "", heat: 0, status: 1 });
+const emptyForm = () => ({ id: 0, keyword: "", category: "comic", heat: 0, status: 1 });
 const form = reactive(emptyForm());
 const rules = {
   keyword: [{ required: true, message: "关键词必填", trigger: "blur" }],
+  category: [{ required: true, message: "请选择分类", trigger: "change" }],
 };
 
 function openCreate() {
@@ -104,6 +124,7 @@ function openEdit(row: RanksApi.HotItem) {
   Object.assign(form, {
     id: row.id,
     keyword: row.keyword,
+    category: row.category || "_common",
     heat: row.heat,
     status: row.status,
   });
@@ -114,6 +135,7 @@ async function handleSave() {
   await formRef.value?.validate();
   const body = {
     keyword: form.keyword.trim(),
+    category: form.category === "_common" ? "" : form.category,
     heat: Number(form.heat) || 0,
     status: form.status,
   };
@@ -153,7 +175,9 @@ onMounted(fetchList);
       <ElAlert type="info" :closable="false" show-icon class="mb-4">
         <template #title>热搜词排序规则</template>
         <div class="text-xs leading-5">
-          列表与前台热搜均按 <b>heat 降序 → search_count 降序</b> 排列。
+          列表与前台热搜均按 <b>heat 降序 → search_count 降序</b> 排列, 每个分类默认下发 <b>10</b> 条。
+          <br />
+          <b>分类</b>: 对应 H5 搜索范围(漫画 / 动漫 / 小说 / 短剧 / 视频)。选「通用」的词会在对应分类不足 10 条时补齐。
           <br />
           <b>热度权重(heat)</b>: 运营手动设置的人工权重, 想把某个词顶上去就调大它, 排序第一优先级。
           <br />
@@ -165,6 +189,9 @@ onMounted(fetchList);
       </ElAlert>
 
       <div class="mb-4 flex flex-wrap items-center gap-2">
+        <ElSelect v-model="search.category" style="width: 130px" @change="doSearch">
+          <ElOption v-for="o in categoryOpts" :key="o.value" :label="o.label" :value="o.value" />
+        </ElSelect>
         <ElSelect v-model="search.status" style="width: 130px" @change="doSearch">
           <ElOption v-for="o in statusOpts" :key="o.value" :label="o.label" :value="o.value" />
         </ElSelect>
@@ -185,6 +212,13 @@ onMounted(fetchList);
       <ElTable v-loading="loading" :data="list" border stripe>
         <ElTableColumn prop="id" label="ID" width="80" />
         <ElTableColumn prop="keyword" label="关键词" min-width="160" show-overflow-tooltip />
+        <ElTableColumn label="分类" width="100" align="center">
+          <template #default="{ row }">
+            <ElTag size="small" :type="row.category ? 'primary' : 'info'">
+              {{ categoryLabel(row.category) }}
+            </ElTag>
+          </template>
+        </ElTableColumn>
         <ElTableColumn label="热度权重" width="110" align="center">
           <template #default="{ row }">
             <ElTag type="warning" size="small">{{ row.heat }}</ElTag>
@@ -228,6 +262,12 @@ onMounted(fetchList);
       <ElForm ref="formRef" :model="form" :rules="rules" label-width="100px">
         <ElFormItem label="关键词" prop="keyword">
           <ElInput v-model="form.keyword" placeholder="用户点击后直接用它去搜索" />
+        </ElFormItem>
+        <ElFormItem label="分类" prop="category">
+          <ElSelect v-model="form.category" style="width: 180px">
+            <ElOption v-for="o in formCategoryOpts" :key="o.value" :label="o.label" :value="o.value" />
+          </ElSelect>
+          <span class="ml-2 text-xs text-gray-400">控制前台哪个分类展示这条热搜</span>
         </ElFormItem>
         <ElFormItem label="热度权重">
           <ElInputNumber v-model="form.heat" :min="0" />
