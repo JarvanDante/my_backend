@@ -176,9 +176,9 @@ onMounted(fetchList);
       <ElAlert type="info" :closable="false" show-icon class="mb-4">
         <template #title>热搜词排序规则</template>
         <div class="text-xs leading-5">
-          列表与前台热搜均按 <b>heat 降序 → search_count 降序</b> 排列, 每个分类默认下发 <b>10</b> 条。
+          列表与前台热搜均按 <b>heat 降序 → search_count 降序</b> 排列, 每个分类最多下发 <b>10</b> 条。
           <br />
-          <b>分类</b>: 对应 H5 搜索范围(漫画 / 动漫 / 小说 / 短剧 / 视频 / 社区)。选「通用」的词会在对应分类不足 10 条时补齐。
+          <b>分类</b>: 对应 H5 搜索范围(漫画 / 动漫 / 小说 / 短剧 / 视频 / 社区)。前台按当前范围只出该分类的词, 不会用「通用」补齐。
           <br />
           <b>热度权重(heat)</b>: 运营手动设置的人工权重, 想把某个词顶上去就调大它, 排序第一优先级。
           <br />
