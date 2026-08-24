@@ -22,6 +22,7 @@ export namespace AiTemplateApi {
     cost_gold: number;
     sort: number;
     status: number;
+    usage_count?: number;
     created_at: string;
   }
   export interface ListParams {
