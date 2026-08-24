@@ -9,9 +9,7 @@ import {
   ElDialog,
   ElForm,
   ElFormItem,
-  ElImage,
   ElInput,
-  ElInputNumber,
   ElMessage,
   ElMessageBox,
   ElOption,
@@ -27,23 +25,19 @@ import {
 import {
   addFilterWordsApi,
   createAnnApi,
-  createJumptabApi,
   deleteAnnApi,
   deleteFilterWordApi,
-  deleteJumptabApi,
   getAnnListApi,
   getFilterWordListApi,
-  getJumptabListApi,
   type OpsConfigApi,
   updateAnnApi,
-  updateJumptabApi,
 } from "#/api/core/opsconfig";
 
 defineOptions({ name: "OpsConfig" });
 
 const activeTab = ref("announcement");
 
-// 三个 Tab 共用的启用/禁用编码(后端 status 只认 0/1)
+// 公告/敏感词共用的启用/禁用编码(后端 status 只认 0/1)
 const statusOpts = [
   { label: "全部", value: "" },
   { label: "关闭", value: "0" },
@@ -160,119 +154,6 @@ async function delAnn(row: OpsConfigApi.AnnItem) {
   loadAnn();
 }
 
-/* ==================== 跳转位 ==================== */
-const jtLoading = ref(false);
-const jtList = ref<OpsConfigApi.JtItem[]>([]);
-const jtPage = reactive({ current: 1, size: 20, total: 0 });
-// location 在 Go 契约里是 int(后端按 location > 0 过滤), 所以这里破例用 number, 0=全部
-const jtSearch = reactive({ status: "", location: 0 });
-
-async function loadJt() {
-  jtLoading.value = true;
-  try {
-    const res = await getJumptabListApi({
-      status: jtSearch.status,
-      location: jtSearch.location || 0,
-      page: jtPage.current,
-      size: jtPage.size,
-    });
-    jtList.value = res.list || [];
-    jtPage.total = res.total || 0;
-  } finally {
-    jtLoading.value = false;
-  }
-}
-function jtSearchDo() {
-  jtPage.current = 1;
-  loadJt();
-}
-function jtReset() {
-  jtSearch.status = "";
-  jtSearch.location = 0;
-  jtSearchDo();
-}
-
-const jtDialog = ref(false);
-const jtIsEdit = ref(false);
-const jtSaving = ref(false);
-const jtFormRef = ref();
-const emptyJt = () => ({
-  id: 0,
-  cn_name: "",
-  en_name: "",
-  avatar: "",
-  link: "",
-  pic_jump_link: "",
-  location: 1,
-  rank: 0,
-  status: 1,
-});
-const jtForm = reactive(emptyJt());
-const jtRules = {
-  cn_name: [{ required: true, message: "名称必填", trigger: "blur" }],
-};
-
-function openJtCreate() {
-  jtIsEdit.value = false;
-  Object.assign(jtForm, emptyJt());
-  jtDialog.value = true;
-}
-function openJtEdit(row: OpsConfigApi.JtItem) {
-  jtIsEdit.value = true;
-  Object.assign(jtForm, {
-    id: row.id,
-    cn_name: row.cn_name,
-    en_name: row.en_name,
-    avatar: row.avatar,
-    link: row.link,
-    pic_jump_link: row.pic_jump_link,
-    location: row.location,
-    rank: row.rank,
-    status: row.status,
-  });
-  jtDialog.value = true;
-}
-async function saveJt() {
-  await jtFormRef.value?.validate();
-  // 后端 JtCreate 直接拒 location <= 0, 这里先给即时反馈, 少一次往返
-  if (Number(jtForm.location) <= 0) {
-    ElMessage.warning("展示位置需大于 0");
-    return;
-  }
-  const body: OpsConfigApi.JtSaveBody = {
-    cn_name: jtForm.cn_name,
-    en_name: jtForm.en_name,
-    avatar: jtForm.avatar,
-    link: jtForm.link,
-    pic_jump_link: jtForm.pic_jump_link,
-    location: Number(jtForm.location),
-    rank: Number(jtForm.rank) || 0,
-    status: jtForm.status,
-  };
-  jtSaving.value = true;
-  try {
-    if (jtIsEdit.value) {
-      await updateJumptabApi(jtForm.id, body);
-      ElMessage.success("已保存");
-    } else {
-      await createJumptabApi(body);
-      ElMessage.success("已新增");
-    }
-    jtDialog.value = false;
-    loadJt();
-  } finally {
-    jtSaving.value = false;
-  }
-}
-async function delJt(row: OpsConfigApi.JtItem) {
-  await ElMessageBox.confirm(`确认删除跳转位「${row.cn_name}」?`, "提示", {
-    type: "warning",
-  });
-  await deleteJumptabApi(row.id);
-  ElMessage.success("已删除");
-  loadJt();
-}
-
 /* ==================== 敏感词 ==================== */
 const fwLoading = ref(false);
 const fwList = ref<OpsConfigApi.FwItem[]>([]);
@@ -352,12 +233,11 @@ async function delFw(row: OpsConfigApi.FwItem) {
 }
 
 /* ==================== Tab 懒加载 ==================== */
-// 只有第一次切到某个 Tab 才拉数据, 避免进页面就打三个接口
+// 只有第一次切到某个 Tab 才拉数据
 const loadedTabs = reactive<Record<string, boolean>>({ announcement: true });
 function onTabChange(name: string) {
   if (loadedTabs[name]) return;
   loadedTabs[name] = true;
-  if (name === "jumptab") loadJt();
   if (name === "filterword") loadFw();
 }
 
@@ -432,91 +312,6 @@ onMounted(loadAnn);
               layout="total, sizes, prev, pager, next"
               @size-change="loadAnn"
               @current-change="loadAnn"
-            />
-          </div>
-        </ElTabPane>
-
-        <!-- ---------- 跳转位 ---------- -->
-        <ElTabPane label="跳转位" name="jumptab">
-          <div class="mb-3 flex flex-wrap items-center gap-2">
-            <ElSelect
-              v-model="jtSearch.status"
-              style="width: 120px"
-              @change="jtSearchDo"
-            >
-              <ElOption
-                v-for="o in statusOpts"
-                :key="o.value"
-                :label="o.label"
-                :value="o.value"
-              />
-            </ElSelect>
-            <!-- location 契约是 int, 0=全部 -->
-            <ElInputNumber
-              v-model="jtSearch.location"
-              :min="0"
-              controls-position="right"
-              style="width: 140px"
-            />
-            <span class="text-xs text-gray-400">展示位置(0=全部)</span>
-            <ElButton type="primary" @click="jtSearchDo">查询</ElButton>
-            <ElButton @click="jtReset">重置</ElButton>
-            <div class="flex-1"></div>
-            <ElButton type="primary" @click="openJtCreate">新增跳转位</ElButton>
-          </div>
-
-          <ElTable v-loading="jtLoading" :data="jtList" border stripe>
-            <ElTableColumn prop="id" label="ID" width="70" />
-            <ElTableColumn label="图标" width="80">
-              <template #default="{ row }">
-                <ElImage
-                  v-if="row.avatar"
-                  :src="row.avatar"
-                  fit="cover"
-                  style="width: 40px; height: 40px"
-                  preview-teleported
-                  :preview-src-list="[row.avatar]"
-                />
-                <span v-else class="text-gray-400">-</span>
-              </template>
-            </ElTableColumn>
-            <ElTableColumn prop="cn_name" label="中文名" min-width="120" />
-            <ElTableColumn prop="en_name" label="英文名" min-width="120" />
-            <ElTableColumn
-              prop="link"
-              label="跳转链接"
-              min-width="180"
-              show-overflow-tooltip
-            />
-            <ElTableColumn prop="location" label="位置" width="80" align="center" />
-            <ElTableColumn prop="rank" label="权重" width="80" align="center" />
-            <ElTableColumn label="状态" width="90" align="center">
-              <template #default="{ row }">
-                <ElTag :type="row.status === 1 ? 'success' : 'info'" size="small">
-                  {{ row.status === 1 ? "启用" : "禁用" }}
-                </ElTag>
-              </template>
-            </ElTableColumn>
-            <ElTableColumn prop="created_at" label="创建时间" width="170" />
-            <ElTableColumn label="操作" width="140" fixed="right">
-              <template #default="{ row }">
-                <ElButton link type="primary" @click="openJtEdit(row)">
-                  编辑
-                </ElButton>
-                <ElButton link type="danger" @click="delJt(row)">删除</ElButton>
-              </template>
-            </ElTableColumn>
-          </ElTable>
-
-          <div class="mt-4 flex justify-end">
-            <ElPagination
-              v-model:current-page="jtPage.current"
-              v-model:page-size="jtPage.size"
-              :total="jtPage.total"
-              :page-sizes="[10, 20, 50, 100]"
-              layout="total, sizes, prev, pager, next"
-              @size-change="loadJt"
-              @current-change="loadJt"
             />
           </div>
         </ElTabPane>
@@ -641,53 +436,6 @@ onMounted(loadAnn);
       <template #footer>
         <ElButton @click="annDialog = false">取消</ElButton>
         <ElButton type="primary" :loading="annSaving" @click="saveAnn">
-          保存
-        </ElButton>
-      </template>
-    </ElDialog>
-
-    <!-- 跳转位表单 -->
-    <ElDialog
-      v-model="jtDialog"
-      :title="jtIsEdit ? '编辑跳转位' : '新增跳转位'"
-      width="560px"
-    >
-      <ElForm ref="jtFormRef" :model="jtForm" :rules="jtRules" label-width="90px">
-        <ElFormItem label="中文名" prop="cn_name">
-          <ElInput v-model="jtForm.cn_name" />
-        </ElFormItem>
-        <ElFormItem label="英文名">
-          <ElInput v-model="jtForm.en_name" />
-        </ElFormItem>
-        <ElFormItem label="图标">
-          <ElInput v-model="jtForm.avatar" placeholder="图片 URL" />
-        </ElFormItem>
-        <ElFormItem label="跳转链接">
-          <ElInput v-model="jtForm.link" placeholder="如: /checkin" />
-        </ElFormItem>
-        <ElFormItem label="图片跳链">
-          <ElInput v-model="jtForm.pic_jump_link" placeholder="可选" />
-        </ElFormItem>
-        <ElFormItem label="展示位置">
-          <ElInputNumber v-model="jtForm.location" :min="1" />
-          <span class="ml-2 text-xs text-gray-400">
-            必填且需大于 0, 前台按位置取图标组
-          </span>
-        </ElFormItem>
-        <ElFormItem label="排序权重">
-          <ElInputNumber v-model="jtForm.rank" :min="0" />
-          <span class="ml-2 text-xs text-gray-400">越大越靠前</span>
-        </ElFormItem>
-        <ElFormItem label="状态">
-          <ElSelect v-model="jtForm.status" style="width: 160px">
-            <ElOption label="启用" :value="1" />
-            <ElOption label="禁用" :value="0" />
-          </ElSelect>
-        </ElFormItem>
-      </ElForm>
-      <template #footer>
-        <ElButton @click="jtDialog = false">取消</ElButton>
-        <ElButton type="primary" :loading="jtSaving" @click="saveJt">
           保存
         </ElButton>
       </template>
