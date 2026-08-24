@@ -34,7 +34,9 @@
 | | 抽奖活动 | `views/ops/lottery.vue` | `api/core/lottery.ts` |
 | | 标签管理 | `views/content/tag.vue` | `api/core/tag.ts` |
 | AI管理 | AI模板 | `views/ai/template.vue` | `api/core/aitemplate.ts` |
+| | 换脸-图片模版 | `views/ai/faceswap-template.vue` | `api/core/aitemplate.ts` |
 | | AI任务 | `views/ai/task.vue` | `api/core/aitask.ts` |
+| | 订单管理 | `views/ai/order.vue` | `api/core/aitask.ts` |
 | 系统设置 | 基础配置 | `views/system/config.vue` | `api/core/config.ts` |
 | | 角色权限 | `views/system/role.vue` | `api/core/system.ts` |
 | | 管理员 | `views/system/admin.vue` | `api/core/system.ts` |

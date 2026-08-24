@@ -17,12 +17,14 @@ export namespace AiTaskApi {
     client_token: string;
     /** 1换脸 2脱衣 3文生图 4图生视频 5文生小说 6AI对话 */
     biz_type: number;
+    biz_type_text?: string;
     template_id: number;
     params: Record<string, any>;
     input_url: string;
     cost_gold: number;
     /** 1排队中 2处理中 3成功 4失败 5已退款 6已取消 */
     status: number;
+    status_text?: string;
     /** 供应商标识与外部任务号, 只有后台视图有, 用于人工排查与对账 */
     provider: string;
     provider_task_id: string;
@@ -33,18 +35,43 @@ export namespace AiTaskApi {
     submitted_at: string;
     finished_at: string;
     created_at: string;
+    nickname?: string;
+    phone?: string;
+    avatar?: string;
+    group_name?: string;
+    channel_name?: string;
+    device_type?: string;
+    sets?: number;
+  }
+  export interface Stats {
+    total: number;
+    success: number;
+    refund: number;
+    abnormal: number;
+    total_gold: number;
+    success_gold: number;
+    refund_gold: number;
+    abnormal_gold: number;
   }
   export interface ListParams {
     user_id?: string;
     biz_type?: string;
     status?: string;
     task_no?: string;
+    nickname?: string;
+    channel_name?: string;
+    device_type?: string;
+    start_time?: string;
+    end_time?: string;
+    register_start?: string;
+    register_end?: string;
     page?: number;
     size?: number;
   }
   export interface Page<T> {
     list: T[];
     total: number;
+    stats?: Stats;
   }
 }
 
@@ -76,4 +103,8 @@ export function refundAiTaskApi(id: number, remark?: string) {
     id,
     remark: remark || "",
   });
+}
+
+export function deleteAiTaskApi(id: number) {
+  return requestClient.delete(`/ai/tasks/${id}`);
 }

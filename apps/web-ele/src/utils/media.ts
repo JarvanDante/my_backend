@@ -4,7 +4,7 @@ export function adminMediaUrl(src?: string) {
   if (/\/hls\/[^/?]+\/cover\.bnc/i.test(src)) {
     return src.replace(/cover\.bnc/i, 'cover.jpg')
   }
-  if (/\.(bnc|ceb)(\?|$)/i.test(src)) {
+  if (/\.(bnc|ceb)(\?|$)/i.test(src) || /(?:^|\/)(?:bnc|ceb)(\?|$)/i.test(src)) {
     return `/backend/media/preview?u=${encodeURIComponent(src)}`
   }
   return src
