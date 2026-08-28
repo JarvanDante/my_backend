@@ -42,19 +42,41 @@ import {
   getCartoonCategoryListApi,
 } from "#/api/core/cartoon-category";
 import {
+  getDouyinCategoryListApi,
+} from "#/api/core/douyin-category";
+import {
   getVideoCategoryListApi,
   type VideoCategoryApi,
 } from "#/api/core/video-category";
 
 defineOptions({ name: "VideoManage" });
 
-const props = withDefaults(defineProps<{ mode?: "video" | "cartoon" }>(), {
-  mode: "video",
-});
+const props = withDefaults(
+  defineProps<{ mode?: "video" | "cartoon" | "douyin" }>(),
+  { mode: "video" },
+);
 const isCartoon = computed(() => props.mode === "cartoon");
-const mediaKind = computed(() => (isCartoon.value ? 2 : 0));
-const tagType = computed(() => (isCartoon.value ? 3 : 1));
-const noun = computed(() => (isCartoon.value ? "动漫" : "视频"));
+const isDouyin = computed(() => props.mode === "douyin");
+const mediaKind = computed(() => {
+  if (isCartoon.value) return 2;
+  if (isDouyin.value) return 3;
+  return 0;
+});
+const tagType = computed(() => {
+  if (isCartoon.value) return 3;
+  if (isDouyin.value) return 2;
+  return 1;
+});
+const noun = computed(() => {
+  if (isCartoon.value) return "动漫";
+  if (isDouyin.value) return "抖音";
+  return "视频";
+});
+const mediaCenterLabel = computed(() => {
+  if (isCartoon.value) return "动漫管理";
+  if (isDouyin.value) return "抖音管理";
+  return "视频管理";
+});
 
 const loading = ref(false);
 const list = ref<VideoApi.Item[]>([]);
@@ -69,7 +91,11 @@ const videoTags = ref<TagApi.Item[]>([]);
 const enabledVideoTags = computed(() => videoTags.value.filter((t) => t.status === 1));
 
 async function loadCategories() {
-  const api = isCartoon.value ? getCartoonCategoryListApi : getVideoCategoryListApi;
+  const api = isCartoon.value
+    ? getCartoonCategoryListApi
+    : isDouyin.value
+      ? getDouyinCategoryListApi
+      : getVideoCategoryListApi;
   const res = await api({ status: "1", page: 1, size: 100 });
   categories.value = res.list || [];
 }
@@ -694,7 +720,7 @@ onMounted(() => {
 
     <ElDialog v-model="assetDialog" title="媒资中心" width="860px" destroy-on-close>
       <p class="mb-3 text-xs text-gray-400">
-        总后台「{{ isCartoon ? "动漫管理" : "视频管理" }}」上传并转码。选用后进入草稿，请在本站编辑分类后再上架。
+        总后台「{{ mediaCenterLabel }}」上传并转码。选用后进入草稿，请在本站编辑分类后再上架。
       </p>
       <div class="mb-3 flex items-center gap-2">
         <ElInput
