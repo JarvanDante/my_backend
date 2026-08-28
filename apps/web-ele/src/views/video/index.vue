@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { computed, onMounted, reactive, ref } from "vue";
+import { computed, onMounted, reactive, ref, watch } from "vue";
 
 import {
   ElButton,
@@ -133,7 +133,7 @@ async function lookupUpUser() {
       upOk.value = false;
       return false;
     }
-    upHint.value = u.nickname || `用户 #${u.id}`;
+    upHint.value = `已确认UP主：${u.nickname || `#${u.id}`}`;
     upOk.value = true;
     return true;
   } catch {
@@ -215,6 +215,14 @@ const form = reactive({
   status: 0,
   up_user_id: undefined as number | undefined,
 });
+
+watch(
+  () => form.up_user_id,
+  () => {
+    if (!isDouyin.value) return;
+    void lookupUpUser();
+  },
+);
 
 const coverUploading = ref(false);
 
@@ -319,13 +327,14 @@ async function save() {
     ElMessage.warning("上架前请选择本站分类");
     return;
   }
-  if (isDouyin.value && form.status === 1) {
-    if (!form.up_user_id) {
+  if (isDouyin.value) {
+    if (form.up_user_id) {
+      if (!(await lookupUpUser())) {
+        ElMessage.warning(upHint.value || "UP主ID无效");
+        return;
+      }
+    } else if (form.status === 1) {
       ElMessage.warning("抖音上架必须填写UP主ID");
-      return;
-    }
-    if (!(await lookupUpUser())) {
-      ElMessage.warning(upHint.value || "UP主无效");
       return;
     }
   }
