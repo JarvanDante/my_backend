@@ -25,6 +25,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import("#/views/content/cartoon-tag.vue"),
         meta: { icon: "lucide:tags", title: "动漫标签" },
       },
+      {
+        name: "CartoonModule",
+        path: "module",
+        component: () => import("#/views/content/cartoon-module.vue"),
+        meta: { icon: "lucide:layout-grid", title: "动漫模块" },
+      },
     ],
   },
 ];
