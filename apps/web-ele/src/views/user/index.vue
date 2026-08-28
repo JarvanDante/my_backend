@@ -18,10 +18,13 @@ import {
   ElMessageBox,
   ElOption,
   ElPagination,
+  ElRadio,
+  ElRadioGroup,
   ElSelect,
   ElTable,
   ElTableColumn,
   ElTag,
+  ElUpload,
 } from "element-plus";
 import dayjs from "dayjs";
 import QRCode from "qrcode";
@@ -33,10 +36,11 @@ import {
   getUserDetailApi,
   getUserListApi,
   setUserDisableApi,
-  setUserGroupApi,
+  updateUserApi,
   type BkUserApi,
 } from "#/api/core/bkuser";
 import { getGroupListApi, type BkGroupApi } from "#/api/core/bkgroup";
+import { uploadMediaApi } from "#/api/core/media";
 import { adminMediaUrl } from "#/utils/media";
 import { encodeId, parseAdminId } from "#/utils/idcrypt";
 
@@ -260,23 +264,139 @@ async function handleBatchDisable(op: "disable" | "enable") {
   fetchList();
 }
 
-// ---------- 调组 ----------
-const groupVisible = ref(false);
-const groupForm = reactive({ id: 0, group_id: 0 });
-async function openGroup(row: BkUserApi.UserItem) {
-  groupForm.id = row.id;
-  groupForm.group_id = row.group_id;
+// ---------- 编辑用户 ----------
+const editVisible = ref(false);
+const editSaving = ref(false);
+const imgUploading = ref(false);
+const bgUploading = ref(false);
+const editForm = reactive({
+  id: 0,
+  nickname: "",
+  signature: "",
+  sex: 0,
+  img: "",
+  bg_img: "",
+  group_id: 0,
+  group_end_time: "" as string,
+  movie_fee_rate: 0,
+  post_fee_rate: 0,
+  tag: "",
+  is_up: 0,
+  privilege: 0,
+  is_disabled: 0,
+  error_msg: "",
+  comment_muted: 0,
+  violate_count: 0,
+  today_comment_count: 0,
+  register_at: "",
+  device_type: "",
+  device_version: "",
+});
+const editSnapshot = ref<typeof editForm | null>(null);
+
+function tagToInput(tag: string) {
+  if (!tag) return "";
+  try {
+    const arr = JSON.parse(tag);
+    if (Array.isArray(arr)) return arr.filter(Boolean).join(",");
+  } catch {
+    if (tag !== "[]") return tag;
+  }
+  return "";
+}
+
+function applyEditDetail(d: BkUserApi.UserDetail) {
+  editForm.id = d.id;
+  editForm.nickname = d.nickname || "";
+  editForm.signature = d.signature || "";
+  editForm.sex = d.sex || 0;
+  editForm.img = d.img || "";
+  editForm.bg_img = d.bg_img || "";
+  editForm.group_id = d.group_id || 0;
+  editForm.group_end_time = d.group_end_time
+    ? dayjs.unix(d.group_end_time).format("YYYY-MM-DD HH:mm:ss")
+    : "";
+  editForm.movie_fee_rate = d.movie_fee_rate || 0;
+  editForm.post_fee_rate = d.post_fee_rate || 0;
+  editForm.tag = tagToInput(d.tag);
+  editForm.is_up = d.is_up === 1 ? 1 : 0;
+  editForm.privilege = d.privilege === 1 ? 1 : 0;
+  editForm.is_disabled = d.is_disabled === 1 ? 1 : 0;
+  editForm.error_msg = d.error_msg || "";
+  editForm.comment_muted = d.comment_muted || 0;
+  editForm.violate_count = d.violate_count || 0;
+  editForm.today_comment_count = d.today_comment_count || 0;
+  editForm.register_at = d.register_at || "";
+  editForm.device_type = d.device_type || "";
+  editForm.device_version = d.device_version || "";
+  editSnapshot.value = { ...editForm };
+}
+
+async function openEdit(row: BkUserApi.UserItem) {
   if (!groups.value.length) {
     const res = await getGroupListApi();
     groups.value = res.list || [];
   }
-  groupVisible.value = true;
+  const d = await getUserDetailApi(row.id);
+  applyEditDetail(d);
+  editVisible.value = true;
 }
-async function handleSaveGroup() {
-  await setUserGroupApi(groupForm.id, groupForm.group_id);
-  ElMessage.success("已调整用户组");
-  groupVisible.value = false;
-  fetchList();
+
+function resetEdit() {
+  if (!editSnapshot.value) return;
+  Object.assign(editForm, editSnapshot.value);
+}
+
+async function onAvatarChange(file: any, field: "img" | "bg_img") {
+  const raw: File | undefined = file?.raw;
+  if (!raw) return false;
+  const uploading = field === "img" ? imgUploading : bgUploading;
+  uploading.value = true;
+  try {
+    const res = await uploadMediaApi(raw, field === "img" ? "avatar" : "image");
+    editForm[field] = res.url;
+    ElMessage.success(field === "img" ? "头像已上传" : "背景图已上传");
+  } finally {
+    uploading.value = false;
+  }
+  return false;
+}
+
+async function handleSaveEdit() {
+  if (!editForm.nickname.trim()) {
+    ElMessage.warning("请填写昵称");
+    return;
+  }
+  if (!editForm.img) {
+    ElMessage.warning("请上传头像");
+    return;
+  }
+  editSaving.value = true;
+  try {
+    await updateUserApi(editForm.id, {
+      nickname: editForm.nickname.trim(),
+      signature: editForm.signature.trim(),
+      sex: editForm.sex,
+      img: editForm.img,
+      bg_img: editForm.bg_img,
+      group_id: editForm.group_id || 0,
+      group_end_time: editForm.group_end_time
+        ? dayjs(editForm.group_end_time).unix()
+        : 0,
+      movie_fee_rate: editForm.movie_fee_rate || 0,
+      post_fee_rate: editForm.post_fee_rate || 0,
+      tag: editForm.tag,
+      is_up: editForm.is_up,
+      privilege: editForm.privilege,
+      is_disabled: editForm.is_disabled,
+      error_msg: editForm.error_msg,
+    });
+    ElMessage.success("已保存");
+    editVisible.value = false;
+    fetchList();
+  } finally {
+    editSaving.value = false;
+  }
 }
 
 // ---------- 调余额 ----------
@@ -568,7 +688,7 @@ onMounted(async () => {
         <ElTableColumn label="操作" width="210" fixed="right" align="center">
           <template #default="{ row }">
             <ElButton link type="primary" @click="openDetail(row)">详情</ElButton>
-            <ElButton link type="primary" @click="openGroup(row)">编辑</ElButton>
+            <ElButton link type="primary" @click="openEdit(row)">编辑</ElButton>
             <ElButton link type="primary" @click="openBalance(row)">调余额</ElButton>
             <ElButton
               link
@@ -672,19 +792,129 @@ onMounted(async () => {
       </div>
     </ElDrawer>
 
-    <!-- 调组 -->
-    <ElDialog v-model="groupVisible" title="调整用户组" width="380px">
-      <ElForm label-width="80px">
-        <ElFormItem label="用户组">
-          <ElSelect v-model="groupForm.group_id" style="width: 100%" placeholder="选择用户组">
-            <ElOption :value="0" label="(移出用户组)" />
+    <!-- 编辑用户 -->
+    <ElDialog v-model="editVisible" title="信息" width="680px" class="user-edit-dialog" destroy-on-close>
+      <div class="edit-section">用户详情</div>
+      <ElForm label-width="110px" class="user-edit-form">
+        <ElFormItem label="昵称">
+          <ElInput v-model="editForm.nickname" maxlength="64" />
+        </ElFormItem>
+        <ElFormItem label="个性签名">
+          <ElInput v-model="editForm.signature" maxlength="255" />
+        </ElFormItem>
+        <ElFormItem label="性别">
+          <ElRadioGroup v-model="editForm.sex">
+            <ElRadio :value="0">未知</ElRadio>
+            <ElRadio :value="1">男</ElRadio>
+            <ElRadio :value="2">女</ElRadio>
+          </ElRadioGroup>
+        </ElFormItem>
+        <ElFormItem label="头像" required>
+          <div class="upload-box">
+            <ElUpload
+              :show-file-list="false"
+              accept="image/*"
+              :disabled="imgUploading"
+              :before-upload="() => false"
+              :on-change="(f: any) => onAvatarChange(f, 'img')"
+            >
+              <div class="upload-tile">
+                <ElImage v-if="editForm.img" :src="imgSrc(editForm.img)" fit="cover" class="upload-preview" />
+                <span v-else class="upload-plus">+</span>
+              </div>
+            </ElUpload>
+          </div>
+        </ElFormItem>
+        <ElFormItem label="背景图">
+          <div class="upload-box">
+            <ElUpload
+              :show-file-list="false"
+              accept="image/*"
+              :disabled="bgUploading"
+              :before-upload="() => false"
+              :on-change="(f: any) => onAvatarChange(f, 'bg_img')"
+            >
+              <div class="upload-tile">
+                <ElImage v-if="editForm.bg_img" :src="imgSrc(editForm.bg_img)" fit="cover" class="upload-preview" />
+                <span v-else class="upload-plus">+</span>
+              </div>
+            </ElUpload>
+          </div>
+        </ElFormItem>
+        <ElFormItem label="VIP">
+          <ElSelect v-model="editForm.group_id" clearable placeholder="请选择" style="width: 100%">
+            <ElOption :value="0" label="无" />
             <ElOption v-for="g in groups" :key="g.id" :label="g.name" :value="g.id" />
           </ElSelect>
         </ElFormItem>
+        <ElFormItem label="VIP结束时间">
+          <ElDatePicker
+            v-model="editForm.group_end_time"
+            type="datetime"
+            value-format="YYYY-MM-DD HH:mm:ss"
+            placeholder="yyyy-MM-dd HH:mm:ss"
+            style="width: 100%"
+          />
+        </ElFormItem>
+        <ElFormItem label="视频分成(%)">
+          <ElInputNumber v-model="editForm.movie_fee_rate" :min="0" :max="100" :controls="false" style="width: 100%" />
+        </ElFormItem>
+        <ElFormItem label="帖子分成(%)">
+          <ElInputNumber v-model="editForm.post_fee_rate" :min="0" :max="100" :controls="false" style="width: 100%" />
+        </ElFormItem>
+        <ElFormItem label="用户标签">
+          <ElInput v-model="editForm.tag" placeholder="多个标签用逗号分隔" />
+        </ElFormItem>
+        <ElFormItem label="是否up主">
+          <ElRadioGroup v-model="editForm.is_up">
+            <ElRadio :value="0">否</ElRadio>
+            <ElRadio :value="1">是</ElRadio>
+          </ElRadioGroup>
+        </ElFormItem>
+        <ElFormItem label="特权">
+          <ElRadioGroup v-model="editForm.privilege">
+            <ElRadio :value="0">无</ElRadio>
+            <ElRadio :value="1">金币免费</ElRadio>
+          </ElRadioGroup>
+        </ElFormItem>
+        <ElFormItem label="是否禁用">
+          <ElRadioGroup v-model="editForm.is_disabled">
+            <ElRadio :value="0">否</ElRadio>
+            <ElRadio :value="1">是</ElRadio>
+          </ElRadioGroup>
+        </ElFormItem>
+        <ElFormItem label="禁用原因">
+          <ElInput v-model="editForm.error_msg" :disabled="editForm.is_disabled === 0" />
+        </ElFormItem>
+        <ElFormItem label="评论禁言">
+          <div class="mute-row">
+            <span>{{ editForm.comment_muted === 1 ? "已禁言" : "未禁言" }}</span>
+            <span>违规次数: {{ editForm.violate_count }}</span>
+            <span>今日已评: {{ editForm.today_comment_count }}</span>
+          </div>
+        </ElFormItem>
+        <ElFormItem>
+          <div class="mute-actions">
+            <p class="mute-tip">
+              禁言≠封号。解除禁言只恢复发言；清除违规会同时清禁言、违规次数和当日配额。社区评论上线后生效。
+            </p>
+            <div class="mute-btns">
+              <ElButton type="primary" disabled>解除禁言</ElButton>
+              <ElButton type="warning" disabled>清除违规记录</ElButton>
+            </div>
+          </div>
+        </ElFormItem>
+        <ElFormItem label="注册时间">
+          <div class="mute-row">
+            <span>{{ editForm.register_at || "-" }}</span>
+            <span>设备: {{ editForm.device_type || "-" }}</span>
+            <span>版本: {{ editForm.device_version || "-" }}</span>
+          </div>
+        </ElFormItem>
       </ElForm>
       <template #footer>
-        <ElButton @click="groupVisible = false">取消</ElButton>
-        <ElButton type="primary" @click="handleSaveGroup">保存</ElButton>
+        <ElButton type="primary" :loading="editSaving" @click="handleSaveEdit">立即提交</ElButton>
+        <ElButton @click="resetEdit">重置</ElButton>
       </template>
     </ElDialog>
 
@@ -721,5 +951,63 @@ onMounted(async () => {
 .user-search-form :deep(.el-form-item__label) {
   padding-right: 8px;
   font-weight: 500;
+}
+
+.edit-section {
+  margin-bottom: 12px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.user-edit-form :deep(.el-form-item) {
+  margin-bottom: 16px;
+}
+
+.upload-tile {
+  width: 88px;
+  height: 88px;
+  display: grid;
+  place-items: center;
+  border: 1px dashed #d4d7de;
+  border-radius: 6px;
+  background: #fafafa;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.upload-preview {
+  width: 88px;
+  height: 88px;
+}
+
+.upload-plus {
+  color: #a8abb2;
+  font-size: 28px;
+  line-height: 1;
+}
+
+.mute-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  color: #606266;
+  font-size: 13px;
+}
+
+.mute-actions {
+  width: 100%;
+}
+
+.mute-tip {
+  margin: 0 0 8px;
+  color: #909399;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.mute-btns {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }
 </style>
