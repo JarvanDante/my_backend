@@ -43,8 +43,31 @@ export namespace BkUserApi {
 
   export interface UserDetail extends UserItem {
     signature: string;
+    bg_img: string;
+    rights: string;
+    privilege: number;
     fans: number;
     follow: number;
+    error_msg: string;
+    comment_muted: number;
+    violate_count: number;
+    today_comment_count: number;
+  }
+
+  export interface UpdateUserBody {
+    nickname: string;
+    signature: string;
+    sex: number;
+    img: string;
+    bg_img: string;
+    group_id: number;
+    group_end_time: number;
+    movie_fee_rate: number;
+    post_fee_rate: number;
+    tag: string;
+    is_up: number;
+    privilege: number;
+    is_disabled: number;
     error_msg: string;
   }
 
@@ -102,6 +125,10 @@ export async function getUserListApi(params: BkUserApi.ListParams) {
 
 export async function getUserDetailApi(id: number) {
   return requestClient.get<BkUserApi.UserDetail>(`/users/${id}`);
+}
+
+export async function updateUserApi(id: number, body: BkUserApi.UpdateUserBody) {
+  return requestClient.put(`/users/${id}`, { id, ...body });
 }
 
 export async function setUserDisableApi(id: number, op: "disable" | "enable", reason = "") {
