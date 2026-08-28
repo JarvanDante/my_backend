@@ -23,9 +23,8 @@ import {
   ElUpload,
 } from "element-plus";
 
-import { getUserListApi, type BkUserApi } from "#/api/core/bkuser";
+import { getUserDetailApi } from "#/api/core/bkuser";
 import { uploadMediaApi } from "#/api/core/media";
-import { encodeId } from "#/utils/idcrypt";
 import { adminMediaUrl } from "#/utils/media";
 import { getTagListApi, type TagApi } from "#/api/core/tag";
 import {
@@ -106,48 +105,43 @@ async function loadVideoTags() {
   videoTags.value = res.list || [];
 }
 
-const upUsers = ref<BkUserApi.UserItem[]>([]);
-const upLoading = ref(false);
+const upHint = ref("");
+const upOk = ref(false);
+const upChecking = ref(false);
 
-function upLabel(u: { id: number; nickname?: string; username?: string }) {
-  const name = u.nickname || u.username || encodeId(u.id) || String(u.id);
-  return `${name} (#${u.id})`;
+function resetUpHint() {
+  upHint.value = "";
+  upOk.value = false;
 }
 
-function ensureUpOption(row: VideoApi.Item) {
-  if (!row.up_user_id) return;
-  if (upUsers.value.some((u) => u.id === row.up_user_id)) return;
-  upUsers.value = [
-    {
-      id: row.up_user_id,
-      nickname: row.up_nickname || "",
-      username: "",
-    } as BkUserApi.UserItem,
-    ...upUsers.value,
-  ];
-}
-
-async function loadUpUsers(keyword = "") {
-  if (!isDouyin.value) return;
-  upLoading.value = true;
+async function lookupUpUser() {
+  const id = Number(form.up_user_id) || 0;
+  if (id <= 0) {
+    resetUpHint();
+    return false;
+  }
+  upChecking.value = true;
   try {
-    const res = await getUserListApi({
-      keyword: keyword || undefined,
-      is_up: 1,
-      status: 1,
-      page: 1,
-      size: 50,
-    });
-    const rows = res.list || [];
-    const cur = form.up_user_id;
-    if (cur && !rows.some((u) => u.id === cur)) {
-      const keep = upUsers.value.find((u) => u.id === cur);
-      upUsers.value = keep ? [keep, ...rows] : rows;
-    } else {
-      upUsers.value = rows;
+    const u = await getUserDetailApi(id);
+    if (u.is_disabled === 1) {
+      upHint.value = `${u.nickname || "该用户"} 已被禁用`;
+      upOk.value = false;
+      return false;
     }
+    if (u.is_up !== 1) {
+      upHint.value = `${u.nickname || "该用户"} 不是UP主`;
+      upOk.value = false;
+      return false;
+    }
+    upHint.value = u.nickname || `用户 #${u.id}`;
+    upOk.value = true;
+    return true;
+  } catch {
+    upHint.value = "用户不存在";
+    upOk.value = false;
+    return false;
   } finally {
-    upLoading.value = false;
+    upChecking.value = false;
   }
 }
 function splitCategories(row: { category?: string; categories?: string[] }) {
@@ -219,7 +213,7 @@ const form = reactive({
   duration: 0,
   sort: 0,
   status: 0,
-  up_user_id: 0 as number,
+  up_user_id: undefined as number | undefined,
 });
 
 const coverUploading = ref(false);
@@ -241,7 +235,7 @@ function resetForm() {
     duration: 0,
     sort: 0,
     status: 0,
-    up_user_id: 0,
+    up_user_id: undefined,
   });
 }
 
@@ -262,7 +256,7 @@ function openEditFromDetail() {
 function openCreate() {
   editing.value = false;
   resetForm();
-  if (isDouyin.value) loadUpUsers();
+  resetUpHint();
   dialog.value = true;
 }
 
@@ -284,11 +278,14 @@ function openEdit(row: VideoApi.Item) {
     duration: row.duration,
     sort: row.sort,
     status: row.status,
-    up_user_id: row.up_user_id || 0,
+    up_user_id: row.up_user_id || undefined,
   });
-  if (isDouyin.value) {
-    ensureUpOption(row);
-    loadUpUsers();
+  if (isDouyin.value && row.up_user_id) {
+    upHint.value = row.up_nickname || `用户 #${row.up_user_id}`;
+    upOk.value = true;
+    void lookupUpUser();
+  } else {
+    resetUpHint();
   }
   dialog.value = true;
 }
@@ -322,9 +319,15 @@ async function save() {
     ElMessage.warning("上架前请选择本站分类");
     return;
   }
-  if (isDouyin.value && form.status === 1 && !form.up_user_id) {
-    ElMessage.warning("抖音上架必须绑定UP主");
-    return;
+  if (isDouyin.value && form.status === 1) {
+    if (!form.up_user_id) {
+      ElMessage.warning("抖音上架必须填写UP主ID");
+      return;
+    }
+    if (!(await lookupUpUser())) {
+      ElMessage.warning(upHint.value || "UP主无效");
+      return;
+    }
   }
   saving.value = true;
   try {
@@ -755,24 +758,22 @@ onMounted(() => {
             />
           </ElSelect>
         </ElFormItem>
-        <ElFormItem v-if="isDouyin" label="up主" :required="form.status === 1">
-          <ElSelect
-            v-model="form.up_user_id"
-            class="w-full"
-            filterable
-            remote
-            clearable
-            placeholder="选择状态正常的UP主"
-            :remote-method="loadUpUsers"
-            :loading="upLoading"
-          >
-            <ElOption
-              v-for="u in upUsers"
-              :key="u.id"
-              :label="upLabel(u)"
-              :value="u.id"
+        <ElFormItem v-if="isDouyin" label="up主ID" :required="form.status === 1">
+          <div class="flex w-full items-center gap-2">
+            <ElInputNumber
+              v-model="form.up_user_id"
+              :min="1"
+              :controls="false"
+              placeholder="填写用户ID"
+              class="w-40"
+              @change="lookupUpUser"
+              @blur="lookupUpUser"
             />
-          </ElSelect>
+            <span v-if="upChecking" class="text-muted-foreground text-xs">核对中…</span>
+            <span v-else-if="upHint" :class="upOk ? 'text-xs text-emerald-600' : 'text-xs text-orange-500'">
+              {{ upHint }}
+            </span>
+          </div>
         </ElFormItem>
         <ElFormItem label="标签">
           <ElSelect
