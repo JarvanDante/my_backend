@@ -18,6 +18,8 @@ export namespace VideoApi {
     duration: number;
     sort: number;
     status: number;
+    up_user_id: number;
+    up_nickname: string;
     created_by: number;
     created_at: string;
     updated_at: string;
@@ -48,6 +50,7 @@ export namespace VideoApi {
       | "duration"
       | "sort"
       | "status"
+      | "up_user_id"
     >
   > & { id?: number; kind?: number };
 }

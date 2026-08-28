@@ -23,7 +23,9 @@ import {
   ElUpload,
 } from "element-plus";
 
+import { getUserListApi, type BkUserApi } from "#/api/core/bkuser";
 import { uploadMediaApi } from "#/api/core/media";
+import { encodeId } from "#/utils/idcrypt";
 import { adminMediaUrl } from "#/utils/media";
 import { getTagListApi, type TagApi } from "#/api/core/tag";
 import {
@@ -103,6 +105,51 @@ async function loadVideoTags() {
   const res = await getTagListApi({ content_type: tagType.value, page: 1, size: 200 });
   videoTags.value = res.list || [];
 }
+
+const upUsers = ref<BkUserApi.UserItem[]>([]);
+const upLoading = ref(false);
+
+function upLabel(u: { id: number; nickname?: string; username?: string }) {
+  const name = u.nickname || u.username || encodeId(u.id) || String(u.id);
+  return `${name} (#${u.id})`;
+}
+
+function ensureUpOption(row: VideoApi.Item) {
+  if (!row.up_user_id) return;
+  if (upUsers.value.some((u) => u.id === row.up_user_id)) return;
+  upUsers.value = [
+    {
+      id: row.up_user_id,
+      nickname: row.up_nickname || "",
+      username: "",
+    } as BkUserApi.UserItem,
+    ...upUsers.value,
+  ];
+}
+
+async function loadUpUsers(keyword = "") {
+  if (!isDouyin.value) return;
+  upLoading.value = true;
+  try {
+    const res = await getUserListApi({
+      keyword: keyword || undefined,
+      is_up: 1,
+      status: 1,
+      page: 1,
+      size: 50,
+    });
+    const rows = res.list || [];
+    const cur = form.up_user_id;
+    if (cur && !rows.some((u) => u.id === cur)) {
+      const keep = upUsers.value.find((u) => u.id === cur);
+      upUsers.value = keep ? [keep, ...rows] : rows;
+    } else {
+      upUsers.value = rows;
+    }
+  } finally {
+    upLoading.value = false;
+  }
+}
 function splitCategories(row: { category?: string; categories?: string[] }) {
   if (row.categories?.length) {
     return [...row.categories];
@@ -172,6 +219,7 @@ const form = reactive({
   duration: 0,
   sort: 0,
   status: 0,
+  up_user_id: 0 as number,
 });
 
 const coverUploading = ref(false);
@@ -193,6 +241,7 @@ function resetForm() {
     duration: 0,
     sort: 0,
     status: 0,
+    up_user_id: 0,
   });
 }
 
@@ -213,6 +262,7 @@ function openEditFromDetail() {
 function openCreate() {
   editing.value = false;
   resetForm();
+  if (isDouyin.value) loadUpUsers();
   dialog.value = true;
 }
 
@@ -234,7 +284,12 @@ function openEdit(row: VideoApi.Item) {
     duration: row.duration,
     sort: row.sort,
     status: row.status,
+    up_user_id: row.up_user_id || 0,
   });
+  if (isDouyin.value) {
+    ensureUpOption(row);
+    loadUpUsers();
+  }
   dialog.value = true;
 }
 
@@ -265,6 +320,10 @@ async function save() {
   }
   if (form.status === 1 && !form.categories.length) {
     ElMessage.warning("上架前请选择本站分类");
+    return;
+  }
+  if (isDouyin.value && form.status === 1 && !form.up_user_id) {
+    ElMessage.warning("抖音上架必须绑定UP主");
     return;
   }
   saving.value = true;
@@ -298,6 +357,11 @@ async function remove(row: VideoApi.Item) {
 async function toggleStatus(row: VideoApi.Item, status: number) {
   if (status === 1 && !splitCategories(row).length) {
     ElMessage.warning("请先编辑并选择本站分类后再上架");
+    openEdit(row);
+    return;
+  }
+  if (isDouyin.value && status === 1 && !row.up_user_id) {
+    ElMessage.warning("请先编辑并绑定UP主后再上架");
     openEdit(row);
     return;
   }
@@ -427,6 +491,12 @@ onMounted(() => {
           </template>
         </ElTableColumn>
         <ElTableColumn prop="title" label="标题" min-width="160" />
+        <ElTableColumn v-if="isDouyin" label="up主" min-width="120" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span v-if="row.up_user_id">{{ row.up_nickname || `#${row.up_user_id}` }}</span>
+            <span v-else class="text-orange-500">未绑定</span>
+          </template>
+        </ElTableColumn>
         <ElTableColumn label="分类" width="80">
           <template #default="{ row }">
             <template v-if="splitCategories(row).length">
@@ -557,6 +627,13 @@ onMounted(() => {
           <ElDescriptionsItem label="标题" :span="2">
             {{ detail.title }}
           </ElDescriptionsItem>
+          <ElDescriptionsItem v-if="isDouyin" label="up主" :span="2">
+            {{
+              detail.up_user_id
+                ? `${detail.up_nickname || "未填昵称"} (#${detail.up_user_id})`
+                : "未绑定"
+            }}
+          </ElDescriptionsItem>
           <ElDescriptionsItem label="媒资ID" :span="2">
             {{ detail.media_code || "-" }}
           </ElDescriptionsItem>
@@ -678,6 +755,25 @@ onMounted(() => {
             />
           </ElSelect>
         </ElFormItem>
+        <ElFormItem v-if="isDouyin" label="up主" :required="form.status === 1">
+          <ElSelect
+            v-model="form.up_user_id"
+            class="w-full"
+            filterable
+            remote
+            clearable
+            placeholder="选择状态正常的UP主"
+            :remote-method="loadUpUsers"
+            :loading="upLoading"
+          >
+            <ElOption
+              v-for="u in upUsers"
+              :key="u.id"
+              :label="upLabel(u)"
+              :value="u.id"
+            />
+          </ElSelect>
+        </ElFormItem>
         <ElFormItem label="标签">
           <ElSelect
             v-model="form.tags"
@@ -720,7 +816,7 @@ onMounted(() => {
 
     <ElDialog v-model="assetDialog" title="媒资中心" width="860px" destroy-on-close>
       <p class="mb-3 text-xs text-gray-400">
-        总后台「{{ mediaCenterLabel }}」上传并转码。选用后进入草稿，请在本站编辑分类后再上架。
+        总后台「{{ mediaCenterLabel }}」上传并转码。选用后进入草稿，请在本站编辑分类{{ isDouyin ? "并绑定UP主" : "" }}后再上架。
       </p>
       <div class="mb-3 flex items-center gap-2">
         <ElInput
