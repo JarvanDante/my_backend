@@ -13,6 +13,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import("#/views/video/index.vue"),
         meta: { icon: "lucide:clapperboard", title: "视频列表" },
       },
+      {
+        name: "VideoModule",
+        path: "module",
+        component: () => import("#/views/content/video-module.vue"),
+        meta: { icon: "lucide:layout-grid", title: "视频模块" },
+      },
     ],
   },
 ];
