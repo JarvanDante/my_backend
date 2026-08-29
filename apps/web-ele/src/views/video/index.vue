@@ -34,6 +34,7 @@ import {
   getVideoListApi,
   pickMediaAssetApi,
   setVideoStatusApi,
+  auditDouyinApi,
   syncMediaVideosApi,
   updateVideoApi,
   type MediaAssetApi,
@@ -82,7 +83,7 @@ const mediaCenterLabel = computed(() => {
 const loading = ref(false);
 const list = ref<VideoApi.Item[]>([]);
 const page = reactive({ current: 1, size: 20, total: 0 });
-const search = reactive({ keyword: "", media_code: "", status: 9 });
+const search = reactive({ keyword: "", media_code: "", status: 9, submit_source: 9 });
 const syncing = ref(false);
 const categories = ref<VideoCategoryApi.Item[]>([]);
 const workCategories = computed(() =>
@@ -128,7 +129,7 @@ async function lookupUpUser() {
       upOk.value = false;
       return false;
     }
-    if (u.is_up !== 1) {
+    if (u.is_up !== 1 && form.submit_source !== 1) {
       upHint.value = `${u.nickname || "该用户"} 不是UP主`;
       upOk.value = false;
       return false;
@@ -154,17 +155,44 @@ function splitCategories(row: { category?: string; categories?: string[] }) {
     .filter(Boolean);
 }
 
-const statusOpts = [
-  { label: "全部", value: 9 },
-  { label: "草稿", value: 0 },
-  { label: "上架", value: 1 },
-  { label: "下架", value: 2 },
+const statusOpts = computed(() =>
+  isDouyin.value
+    ? [
+        { label: "全部", value: 9 },
+        { label: "待审核", value: 3 },
+        { label: "已上架", value: 1 },
+        { label: "已拒绝", value: 4 },
+        { label: "已下架", value: 8 },
+      ]
+    : [
+        { label: "全部", value: 9 },
+        { label: "草稿", value: 0 },
+        { label: "上架", value: 1 },
+        { label: "下架", value: 2 },
+      ],
+);
+const sourceOpts = [
+  { label: "全部来源", value: 9 },
+  { label: "后台录入", value: 0 },
+  { label: "用户上传", value: 1 },
 ];
-const statusTag: Record<number, { t: string; type: "info" | "success" | "warning" }> = {
-  0: { t: "草稿", type: "info" },
-  1: { t: "上架", type: "success" },
-  2: { t: "下架", type: "warning" },
-};
+const statusTag = computed<
+  Record<number, { t: string; type: "danger" | "info" | "success" | "warning" }>
+>(() =>
+  isDouyin.value
+    ? {
+        0: { t: "已下架", type: "info" },
+        1: { t: "已上架", type: "success" },
+        2: { t: "已下架", type: "warning" },
+        3: { t: "待审核", type: "warning" },
+        4: { t: "已拒绝", type: "danger" },
+      }
+    : {
+        0: { t: "草稿", type: "info" },
+        1: { t: "上架", type: "success" },
+        2: { t: "下架", type: "warning" },
+      },
+);
 
 async function loadList() {
   loading.value = true;
@@ -174,6 +202,7 @@ async function loadList() {
       media_code: search.media_code || undefined,
       kind: mediaKind.value,
       status: search.status,
+      submit_source: isDouyin.value ? search.submit_source : 9,
       page: page.current,
       size: page.size,
     });
@@ -191,6 +220,7 @@ function resetSearch() {
   search.keyword = "";
   search.media_code = "";
   search.status = 9;
+  search.submit_source = 9;
   doSearch();
 }
 
@@ -213,6 +243,7 @@ const form = reactive({
   duration: 0,
   sort: 0,
   status: 0,
+  submit_source: 0,
   up_user_id: undefined as number | undefined,
 });
 
@@ -243,6 +274,7 @@ function resetForm() {
     duration: 0,
     sort: 0,
     status: 0,
+    submit_source: 0,
     up_user_id: undefined,
   });
 }
@@ -286,6 +318,7 @@ function openEdit(row: VideoApi.Item) {
     duration: row.duration,
     sort: row.sort,
     status: row.status,
+    submit_source: row.submit_source ?? 0,
     up_user_id: row.up_user_id || undefined,
   });
   if (isDouyin.value && row.up_user_id) {
@@ -366,7 +399,49 @@ async function remove(row: VideoApi.Item) {
   loadList();
 }
 
+const reviewing = ref(false);
+const rejectDialog = ref(false);
+const rejectForm = reactive({ id: 0, title: "", reason: "" });
+
+async function handlePass(row: VideoApi.Item) {
+  await ElMessageBox.confirm(`通过「${row.title}」？通过后仍需上架才会出现在前台。`, "审核通过", {
+    type: "warning",
+  });
+  await auditDouyinApi(row.id, true);
+  ElMessage.success("已通过，可编辑分类后上架");
+  loadList();
+}
+
+function openReject(row: VideoApi.Item) {
+  Object.assign(rejectForm, { id: row.id, title: row.title, reason: "" });
+  rejectDialog.value = true;
+}
+
+async function submitReject() {
+  if (!rejectForm.reason.trim()) {
+    ElMessage.warning("请填写拒绝原因");
+    return;
+  }
+  reviewing.value = true;
+  try {
+    await auditDouyinApi(rejectForm.id, false, rejectForm.reason.trim());
+    ElMessage.success("已拒绝");
+    rejectDialog.value = false;
+    loadList();
+  } finally {
+    reviewing.value = false;
+  }
+}
+
+function canOnline(row: VideoApi.Item) {
+  return row.status === 0 || row.status === 2;
+}
+
 async function toggleStatus(row: VideoApi.Item, status: number) {
+  if (row.status === 3 || row.status === 4) {
+    ElMessage.warning("请先审核通过再上架");
+    return;
+  }
   if (status === 1 && !splitCategories(row).length) {
     ElMessage.warning("请先编辑并选择本站分类后再上架");
     openEdit(row);
@@ -479,6 +554,19 @@ onMounted(() => {
             :value="o.value"
           />
         </ElSelect>
+        <ElSelect
+          v-if="isDouyin"
+          v-model="search.submit_source"
+          style="width: 130px"
+          @change="doSearch"
+        >
+          <ElOption
+            v-for="o in sourceOpts"
+            :key="o.value"
+            :label="o.label"
+            :value="o.value"
+          />
+        </ElSelect>
         <ElButton type="primary" @click="doSearch">查询</ElButton>
         <ElButton @click="resetSearch">重置</ElButton>
         <div class="flex-1"></div>
@@ -503,6 +591,13 @@ onMounted(() => {
           </template>
         </ElTableColumn>
         <ElTableColumn prop="title" label="标题" min-width="160" />
+        <ElTableColumn v-if="isDouyin" label="来源" width="96" align="center">
+          <template #default="{ row }">
+            <ElTag :type="row.submit_source === 1 ? 'warning' : 'info'" size="small">
+              {{ row.submit_source === 1 ? "用户上传" : "后台录入" }}
+            </ElTag>
+          </template>
+        </ElTableColumn>
         <ElTableColumn v-if="isDouyin" label="up主" min-width="120" show-overflow-tooltip>
           <template #default="{ row }">
             <span v-if="row.up_user_id">{{ row.up_nickname || `#${row.up_user_id}` }}</span>
@@ -559,12 +654,16 @@ onMounted(() => {
           </template>
         </ElTableColumn>
         <ElTableColumn prop="created_at" label="创建时间" min-width="160" />
-        <ElTableColumn label="操作" width="300" fixed="right">
+        <ElTableColumn label="操作" :width="isDouyin ? 360 : 300" fixed="right">
           <template #default="{ row }">
             <ElButton link type="primary" @click="openDetail(row)">详情</ElButton>
             <ElButton link type="primary" @click="openEdit(row)">编辑</ElButton>
+            <template v-if="isDouyin && row.status === 3">
+              <ElButton link type="success" @click="handlePass(row)">通过</ElButton>
+              <ElButton link type="danger" @click="openReject(row)">拒绝</ElButton>
+            </template>
             <ElButton
-              v-if="row.status !== 1"
+              v-if="canOnline(row)"
               link
               type="success"
               @click="toggleStatus(row, 1)"
@@ -638,6 +737,12 @@ onMounted(() => {
           </ElDescriptionsItem>
           <ElDescriptionsItem label="标题" :span="2">
             {{ detail.title }}
+          </ElDescriptionsItem>
+          <ElDescriptionsItem v-if="isDouyin" label="来源">
+            {{ detail.submit_source === 1 ? "用户上传" : "后台录入" }}
+          </ElDescriptionsItem>
+          <ElDescriptionsItem v-if="isDouyin && detail.reject_reason" label="拒绝原因" :span="2">
+            {{ detail.reject_reason }}
           </ElDescriptionsItem>
           <ElDescriptionsItem v-if="isDouyin" label="up主" :span="2">
             {{
@@ -810,11 +915,14 @@ onMounted(() => {
         <ElFormItem label="排序">
           <ElInputNumber v-model="form.sort" :min="0" :max="999999" />
         </ElFormItem>
-        <ElFormItem label="状态">
+        <ElFormItem v-if="form.status === 3 || form.status === 4" label="状态">
+          <span>{{ form.status === 3 ? "待审核（审核通过后再上架）" : "已拒绝" }}</span>
+        </ElFormItem>
+        <ElFormItem v-else label="状态">
           <ElSelect v-model="form.status" class="w-40">
-            <ElOption label="草稿" :value="0" />
-            <ElOption label="上架" :value="1" />
-            <ElOption label="下架" :value="2" />
+            <ElOption :label="isDouyin ? '已下架' : '草稿'" :value="0" />
+            <ElOption :label="isDouyin ? '已上架' : '上架'" :value="1" />
+            <ElOption :label="isDouyin ? '已下架' : '下架'" :value="2" />
           </ElSelect>
         </ElFormItem>
       </ElForm>
@@ -888,6 +996,26 @@ onMounted(() => {
           @current-change="loadAssets"
         />
       </div>
+    </ElDialog>
+
+    <ElDialog v-model="rejectDialog" title="拒绝抖音" width="480px">
+      <ElForm label-width="88px">
+        <ElFormItem label="作品">{{ rejectForm.title }}</ElFormItem>
+        <ElFormItem label="拒绝原因" required>
+          <ElInput
+            v-model="rejectForm.reason"
+            type="textarea"
+            :rows="3"
+            maxlength="200"
+            show-word-limit
+            placeholder="会展示给上传用户"
+          />
+        </ElFormItem>
+      </ElForm>
+      <template #footer>
+        <ElButton @click="rejectDialog = false">取消</ElButton>
+        <ElButton type="danger" :loading="reviewing" @click="submitReject">拒绝</ElButton>
+      </template>
     </ElDialog>
   </div>
 </template>

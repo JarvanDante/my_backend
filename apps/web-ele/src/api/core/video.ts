@@ -18,6 +18,8 @@ export namespace VideoApi {
     duration: number;
     sort: number;
     status: number;
+    submit_source: number;
+    reject_reason: string;
     up_user_id: number;
     up_nickname: string;
     created_by: number;
@@ -60,6 +62,7 @@ export function getVideoListApi(params: {
   media_code?: string;
   kind?: number;
   status?: number;
+  submit_source?: number;
   page?: number;
   size?: number;
 }) {
@@ -118,4 +121,11 @@ export function deleteVideoApi(id: number) {
 
 export function setVideoStatusApi(id: number, status: number) {
   return requestClient.put(`/videos/${id}/status`, { status });
+}
+
+export function auditDouyinApi(id: number, pass: boolean, rejectReason = "") {
+  return requestClient.post(`/videos/${id}/audit`, {
+    pass,
+    reject_reason: rejectReason,
+  });
 }
