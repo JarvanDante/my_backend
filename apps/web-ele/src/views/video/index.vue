@@ -352,8 +352,8 @@ async function save() {
     ElMessage.warning("请填写标题");
     return;
   }
-  if (!form.source_url && !form.media_code) {
-    ElMessage.warning(`请从媒资中心选用${noun.value}`);
+  if (!form.source_url && !form.source_key && !form.media_code) {
+    ElMessage.warning(isDouyin.value && form.submit_source === 1 ? "请保留上传的视频" : `请从媒资中心选用${noun.value}`);
     return;
   }
   if (form.status === 1 && !form.categories.length) {
