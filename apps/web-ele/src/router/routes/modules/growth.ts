@@ -11,7 +11,7 @@ const routes: RouteRecordRaw[] = [
         name: "GrowthList",
         path: "list",
         component: () => import("#/views/growth/index.vue"),
-        meta: { icon: "lucide:trophy", title: "成长中心" },
+        meta: { icon: "lucide:trophy", title: "VIP等级" },
       },
     ],
   },
