@@ -87,12 +87,7 @@ const search = reactive({ keyword: "", media_code: "", status: 9, submit_source:
 const syncing = ref(false);
 const categories = ref<VideoCategoryApi.Item[]>([]);
 const workCategories = computed(() =>
-  categories.value.filter(
-    (c) =>
-      c.kind === 0 &&
-      c.status === 1 &&
-      !(isDouyin.value && c.name === "发现"),
-  ),
+  categories.value.filter((c) => c.kind === 0 && c.status === 1),
 );
 const videoTags = ref<TagApi.Item[]>([]);
 const enabledVideoTags = computed(() => videoTags.value.filter((t) => t.status === 1));
