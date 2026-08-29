@@ -227,6 +227,12 @@ function resetSearch() {
 const dialog = ref(false);
 const editing = ref(false);
 const saving = ref(false);
+const wantOnline = ref(false);
+
+function needCategory() {
+  if (form.status === 1 || wantOnline.value) return true;
+  return isDouyin.value && form.status !== 3 && form.status !== 4;
+}
 const form = reactive({
   id: 0,
   title: "",
@@ -295,12 +301,14 @@ function openEditFromDetail() {
 
 function openCreate() {
   editing.value = false;
+  wantOnline.value = false;
   resetForm();
   resetUpHint();
   dialog.value = true;
 }
 
-function openEdit(row: VideoApi.Item) {
+function openEdit(row: VideoApi.Item, online = false) {
+  wantOnline.value = online;
   editing.value = true;
   Object.assign(form, {
     id: row.id,
@@ -356,8 +364,8 @@ async function save() {
     ElMessage.warning(isDouyin.value && form.submit_source === 1 ? "请保留上传的视频" : `请从媒资中心选用${noun.value}`);
     return;
   }
-  if (form.status === 1 && !form.categories.length) {
-    ElMessage.warning("上架前请选择本站分类");
+  if (needCategory() && !form.categories.length) {
+    ElMessage.warning("请选择本站分类");
     return;
   }
   if (isDouyin.value) {
@@ -382,8 +390,15 @@ async function save() {
     };
     if (editing.value) await updateVideoApi(payload);
     else await createVideoApi(payload);
-    ElMessage.success("保存成功");
+    if (wantOnline.value && (form.id || editing.value)) {
+      const id = form.id;
+      if (id) await setVideoStatusApi(id, 1);
+      ElMessage.success("已保存并上架");
+    } else {
+      ElMessage.success("保存成功");
+    }
     dialog.value = false;
+    wantOnline.value = false;
     loadList();
   } finally {
     saving.value = false;
@@ -444,12 +459,12 @@ async function toggleStatus(row: VideoApi.Item, status: number) {
   }
   if (status === 1 && !splitCategories(row).length) {
     ElMessage.warning("请先编辑并选择本站分类后再上架");
-    openEdit(row);
+    openEdit(row, true);
     return;
   }
   if (isDouyin.value && status === 1 && !row.up_user_id) {
     ElMessage.warning("请先编辑并绑定UP主后再上架");
-    openEdit(row);
+    openEdit(row, true);
     return;
   }
   await setVideoStatusApi(row.id, status);
@@ -802,8 +817,12 @@ onMounted(() => {
       :title="editing ? `编辑${noun}` : `新增${noun}`"
       width="640px"
       destroy-on-close
+      @closed="wantOnline = false"
     >
       <ElForm label-width="88px">
+        <p v-if="wantOnline" class="mb-3 text-sm text-orange-500">
+          上架前请选择本站分类，保存后将自动上架
+        </p>
         <ElFormItem label="标题" required>
           <ElInput v-model="form.title" maxlength="128" show-word-limit />
         </ElFormItem>
@@ -854,7 +873,7 @@ onMounted(() => {
             请从媒资中心选用，子后台不支持直接上传
           </span>
         </ElFormItem>
-        <ElFormItem label="分类">
+        <ElFormItem label="分类" :required="needCategory()">
           <ElSelect
             v-model="form.categories"
             class="video-multi-select"
