@@ -296,7 +296,7 @@ onMounted(loadGroups);
 
     <ElDialog
       v-model="gDialog"
-      :title="gEdit ? '编辑会员等级' : '添加会员等级'"
+      :title="gEdit ? '编辑VIP等级' : '添加VIP等级'"
       width="720px"
       top="5vh"
     >
@@ -312,12 +312,12 @@ onMounted(loadGroups);
             placeholder="未填写时默认为学徒"
           />
         </ElFormItem>
-        <ElFormItem label="头部会员卡描述">
+        <ElFormItem label="VIP等级描述">
           <ElInput
             v-model="gForm.title_description"
             maxlength="21"
             show-word-limit
-            placeholder="请输入头部会员卡描述"
+            placeholder="请输入VIP等级描述"
           />
         </ElFormItem>
         <ElFormItem label="促销类型" required>
