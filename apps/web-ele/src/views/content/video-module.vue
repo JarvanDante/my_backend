@@ -275,7 +275,7 @@ onMounted(async () => {
             }}
           </template>
         </ElTableColumn>
-        <ElTableColumn label="检索条件" min-width="200">
+        <ElTableColumn label="标签" min-width="200">
           <template #default="{ row }">
             {{
               row.tag_names?.length
@@ -361,15 +361,15 @@ onMounted(async () => {
               :value="c.id"
             />
           </ElSelect>
-          <p class="mt-1 text-xs text-gray-400">选中任一分类即命中，不选则按全部作品再叠加标签</p>
+          <p class="mt-1 text-xs text-gray-400">可多选。与标签同时生效：命中任一所选分类</p>
         </ElFormItem>
-        <ElFormItem label="检索条件">
+        <ElFormItem label="标签">
           <ElSelect
             v-model="form.tag_ids"
             multiple
             clearable
             filterable
-            placeholder="从视频标签多选，不选则按最新"
+            placeholder="从视频标签多选，不选则不限标签"
             style="width: 100%"
           >
             <ElOption
@@ -379,7 +379,7 @@ onMounted(async () => {
               :value="t.id"
             />
           </ElSelect>
-          <p class="mt-1 text-xs text-gray-400">暂时按标签检索，选中任一标签即命中</p>
+          <p class="mt-1 text-xs text-gray-400">可多选。与分类同时生效：命中任一所选标签</p>
         </ElFormItem>
         <ElFormItem label="展示数量">
           <ElInputNumber v-model="form.size" :min="1" :max="30" />
