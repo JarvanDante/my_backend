@@ -5,7 +5,7 @@ import { requestClient } from "#/api/request";
  *
  * style: 1=1大2小横图 2=2小横图 3=1大横图 4=2竖图 5=竖图横滑 6=横图横滑 7=竖图3X3
  * icon: 1最新 2星星 3火
- * 检索条件暂按 tag_ids。
+ * 检索条件按 category_ids + tag_ids。
  */
 export namespace ComicsModuleApi {
   export interface Item {
@@ -14,6 +14,8 @@ export namespace ComicsModuleApi {
     position: string;
     style: number;
     icon: number;
+    category_ids: number[];
+    category_names: string[];
     tag_ids: number[];
     tag_names: string[];
     size: number;
@@ -25,6 +27,7 @@ export namespace ComicsModuleApi {
   export interface ListParams {
     name?: string;
     position?: string;
+    category_id?: number;
     status?: string;
     page?: number;
     size?: number;
@@ -34,6 +37,7 @@ export namespace ComicsModuleApi {
     position?: string;
     style?: number;
     icon?: number;
+    category_ids?: number[];
     tag_ids?: number[];
     size?: number;
     rank?: number;
