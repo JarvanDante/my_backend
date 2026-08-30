@@ -23,6 +23,7 @@ export namespace CommentApi {
     reply_count: number;
     /** 0待审 1已上墙 2已拒绝 */
     status: number;
+    belong_label?: string;
     created_at: string;
   }
   export interface ListParams {

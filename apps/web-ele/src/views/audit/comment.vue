@@ -39,6 +39,8 @@ const mediaOpts = [
   { label: "帖子", value: "2" },
   { label: "漫画", value: "4" },
   { label: "小说", value: "7" },
+  { label: "动漫", value: "8" },
+  { label: "抖音", value: "9" },
 ];
 const statusMap: Record<
   number,
@@ -191,9 +193,8 @@ onMounted(fetchList);
         />
         <ElTableColumn label="所属" width="140">
           <template #default="{ row }">
-            {{ mediaMap[row.media_type] ?? row.media_type }} #{{
-              row.content_id
-            }}
+            {{ row.belong_label || mediaMap[row.media_type] || row.media_type }}
+            #{{ row.content_id }}
           </template>
         </ElTableColumn>
         <ElTableColumn prop="parent_id" label="回复对象" width="90" align="center">
