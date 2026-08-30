@@ -23,6 +23,10 @@ import {
 
 import { getTagListApi, type TagApi } from "#/api/core/tag";
 import {
+  getVideoCategoryListApi,
+  type VideoCategoryApi,
+} from "#/api/core/video-category";
+import {
   videoModuleApi,
   type MediaModuleApi,
 } from "#/api/core/video-module";
@@ -64,8 +68,10 @@ const statusOpts = [
 const loading = ref(false);
 const list = ref<MediaModuleApi.Item[]>([]);
 const tags = ref<TagApi.Item[]>([]);
+const categories = ref<VideoCategoryApi.Item[]>([]);
+const workCategories = () => categories.value.filter((c) => c.kind === 0);
 const page = reactive({ current: 1, size: 20, total: 0 });
-const search = reactive({ name: "", position: "", status: "" });
+const search = reactive({ name: "", position: "", category_id: "" as number | "", status: "" });
 
 async function fetchTags() {
   const res = await getTagListApi({
@@ -77,12 +83,18 @@ async function fetchTags() {
   tags.value = res.list || [];
 }
 
+async function fetchCategories() {
+  const res = await getVideoCategoryListApi({ status: "1", page: 1, size: 200 });
+  categories.value = res.list || [];
+}
+
 async function fetchList() {
   loading.value = true;
   try {
     const res = await videoModuleApi.list({
       name: search.name.trim() || undefined,
       position: search.position || undefined,
+      category_id: search.category_id || undefined,
       status: search.status,
       page: page.current,
       size: page.size,
@@ -100,6 +112,7 @@ function doSearch() {
 function resetSearch() {
   search.name = "";
   search.position = "";
+  search.category_id = "";
   search.status = "";
   doSearch();
 }
@@ -114,6 +127,7 @@ const emptyForm = () => ({
   position: DEFAULT_POS,
   style: 2,
   icon: 1,
+  category_ids: [] as number[],
   tag_ids: [] as number[],
   size: 6,
   rank: 0,
@@ -139,6 +153,7 @@ function openEdit(row: MediaModuleApi.Item) {
     position: row.position || DEFAULT_POS,
     style: row.style || 2,
     icon: row.icon || 1,
+    category_ids: [...(row.category_ids || [])],
     tag_ids: [...(row.tag_ids || [])],
     size: row.size || 6,
     rank: row.rank || 0,
@@ -154,6 +169,7 @@ async function handleSave() {
     position: form.position,
     style: Number(form.style) || 2,
     icon: Number(form.icon) || 1,
+    category_ids: form.category_ids,
     tag_ids: form.tag_ids,
     size: Number(form.size) || 6,
     rank: Number(form.rank) || 0,
@@ -185,7 +201,7 @@ async function handleDelete(row: MediaModuleApi.Item) {
 }
 
 onMounted(async () => {
-  await Promise.all([fetchTags(), fetchList()]);
+  await Promise.all([fetchCategories(), fetchTags(), fetchList()]);
 });
 </script>
 
@@ -200,6 +216,20 @@ onMounted(async () => {
           style="width: 180px"
           @keyup.enter="doSearch"
         />
+        <ElSelect
+          v-model="search.category_id"
+          placeholder="分类"
+          clearable
+          style="width: 160px"
+          @change="doSearch"
+        >
+          <ElOption
+            v-for="c in workCategories()"
+            :key="c.id"
+            :label="c.name"
+            :value="c.id"
+          />
+        </ElSelect>
         <ElSelect
           v-model="search.position"
           placeholder="位置"
@@ -234,6 +264,15 @@ onMounted(async () => {
         <ElTableColumn label="展示风格" min-width="160">
           <template #default="{ row }">
             {{ styleMap[row.style] ?? row.style }}
+          </template>
+        </ElTableColumn>
+        <ElTableColumn label="分类" min-width="160">
+          <template #default="{ row }">
+            {{
+              row.category_names?.length
+                ? row.category_names.join(" / ")
+                : "不限分类"
+            }}
           </template>
         </ElTableColumn>
         <ElTableColumn label="检索条件" min-width="200">
@@ -305,6 +344,24 @@ onMounted(async () => {
               :value="o.value"
             />
           </ElSelect>
+        </ElFormItem>
+        <ElFormItem label="分类">
+          <ElSelect
+            v-model="form.category_ids"
+            multiple
+            clearable
+            filterable
+            placeholder="从视频分类多选，不选则不限分类"
+            style="width: 100%"
+          >
+            <ElOption
+              v-for="c in workCategories()"
+              :key="c.id"
+              :label="c.name"
+              :value="c.id"
+            />
+          </ElSelect>
+          <p class="mt-1 text-xs text-gray-400">选中任一分类即命中，不选则按全部作品再叠加标签</p>
         </ElFormItem>
         <ElFormItem label="检索条件">
           <ElSelect
