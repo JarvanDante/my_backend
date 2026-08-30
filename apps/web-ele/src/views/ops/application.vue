@@ -150,7 +150,7 @@ async function handleSave() {
 
 async function handleDelete(row: ApplicationApi.Item) {
   await ElMessageBox.confirm(
-    `确认删除福利应用「${row.name}」? 前台将不再展示该应用。`,
+    `确认删除官方应用「${row.name}」? 前台将不再展示该应用。`,
     "提示",
     { type: "warning" },
   );
@@ -184,7 +184,7 @@ onMounted(fetchList);
         <ElButton type="primary" @click="doSearch">查询</ElButton>
         <ElButton @click="resetSearch">重置</ElButton>
         <div class="flex-1"></div>
-        <ElButton type="primary" @click="openCreate">新增福利应用</ElButton>
+        <ElButton type="primary" @click="openCreate">新增官方应用</ElButton>
       </div>
 
       <ElTable v-loading="loading" :data="list" border stripe>
@@ -266,7 +266,7 @@ onMounted(fetchList);
     <!-- 应用表单 -->
     <ElDialog
       v-model="dialog"
-      :title="isEdit ? '编辑福利应用' : '新增福利应用'"
+      :title="isEdit ? '编辑官方应用' : '新增官方应用'"
       width="600px"
     >
       <ElForm ref="formRef" :model="form" :rules="rules" label-width="100px">

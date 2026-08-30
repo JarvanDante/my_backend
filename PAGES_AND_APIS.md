@@ -27,7 +27,7 @@
 | 运营管理 | 运营中心 | `views/ops/index.vue` | `api/core/ops.ts` |
 | | 兑换码 | `views/ops/codes.vue` | `api/core/promo.ts` / `api/core/redeemcode.ts` |
 | | 商品兑换 | `views/ops/redeem-goods.vue` | `api/core/redeemgoods.ts` |
-| | 推广应用 | `views/ops/application.vue` | `api/core/application.ts` |
+| | 官方应用 | `views/ops/application.vue` | `api/core/application.ts` |
 | | 排行热搜 | `views/ops/rank.vue` | `api/core/ranks.ts` |
 | | 抽奖活动 | `views/ops/lottery.vue` | `api/core/lottery.ts` |
 | | 标签管理 | `views/content/tag.vue` | `api/core/tag.ts` |
