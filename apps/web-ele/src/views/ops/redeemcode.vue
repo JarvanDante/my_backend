@@ -236,7 +236,7 @@ onMounted(loadCodes);
 <template>
   <div>
     <ElCard shadow="never">
-      <ElTabs v-model="activeTab" @tab-change="onTabChange">
+      <ElTabs v-model="activeTab" type="border-card" @tab-change="onTabChange">
         <!-- ---------- 兑换码 ---------- -->
         <ElTabPane label="兑换码" name="codes">
           <ElAlert

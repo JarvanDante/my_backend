@@ -186,7 +186,7 @@ onMounted(loadRpkgs);
 <template>
   <div class="p-5">
     <ElCard shadow="never">
-      <ElTabs v-model="activeTab" @tab-change="onTab">
+      <ElTabs v-model="activeTab" type="border-card" @tab-change="onTab">
         <!-- 充值套餐 -->
         <ElTabPane label="充值套餐" name="recharge">
           <div class="mb-3">
