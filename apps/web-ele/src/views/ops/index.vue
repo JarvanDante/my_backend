@@ -31,6 +31,7 @@ import {
   setCustomerUrlApi,
   setNoticeStatusApi,
 } from "#/api/core/ops";
+import { encodeId } from "#/utils/idcrypt";
 
 defineOptions({ name: "OpsManage" });
 
@@ -239,7 +240,11 @@ onMounted(loadNotices);
                 <div class="mb-2 font-medium">拉新排行</div>
                 <ElTable :data="shareStats?.invite_rank || []" border size="small">
                   <ElTableColumn prop="user_id" label="用户ID" width="90" />
-                  <ElTableColumn prop="username" label="推荐人" />
+                  <ElTableColumn label="推荐人">
+                    <template #default="{ row }">
+                      {{ encodeId(row.user_id) || row.username }}
+                    </template>
+                  </ElTableColumn>
                   <ElTableColumn prop="invite_count" label="拉新数" width="100" align="right" />
                 </ElTable>
               </div>
