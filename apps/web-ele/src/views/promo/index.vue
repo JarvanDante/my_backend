@@ -155,7 +155,7 @@ onMounted(loadCodes);
 </script>
 
 <template>
-  <div class="p-5">
+  <div>
     <ElCard shadow="never">
       <ElTabs v-model="activeTab" @tab-change="onTab">
         <ElTabPane label="兑换码" name="codes">

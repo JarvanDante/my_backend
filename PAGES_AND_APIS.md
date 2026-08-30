@@ -25,8 +25,7 @@
 | | 提现审核 | `views/finance/withdrawal.vue` | `api/core/withdrawal.ts` |
 | | 优惠券 | `views/finance/coupon.vue` | `api/core/coupon.ts` |
 | 运营管理 | 运营中心 | `views/ops/index.vue` | `api/core/ops.ts` |
-| | 推广兑换码 | `views/promo/index.vue` | `api/core/promo.ts` |
-| | 兑换码 | `views/ops/redeemcode.vue` | `api/core/redeemcode.ts` |
+| | 兑换码 | `views/ops/codes.vue` | `api/core/promo.ts` / `api/core/redeemcode.ts` |
 | | 商品兑换 | `views/ops/redeem-goods.vue` | `api/core/redeemgoods.ts` |
 | | 推广应用 | `views/ops/application.vue` | `api/core/application.ts` |
 | | 排行热搜 | `views/ops/rank.vue` | `api/core/ranks.ts` |
