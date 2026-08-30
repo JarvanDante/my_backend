@@ -16,6 +16,7 @@ export default defineConfig(async () => {
       ],
       server: {
         host: "0.0.0.0",
+        allowedHosts: ["admin.panalow.cc"],
         proxy: {
           "/backend": {
             changeOrigin: true,
