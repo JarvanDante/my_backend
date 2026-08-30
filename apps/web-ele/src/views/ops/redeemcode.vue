@@ -234,7 +234,7 @@ onMounted(loadCodes);
 </script>
 
 <template>
-  <div class="p-5">
+  <div>
     <ElCard shadow="never">
       <ElTabs v-model="activeTab" @tab-change="onTabChange">
         <!-- ---------- 兑换码 ---------- -->
