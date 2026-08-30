@@ -225,7 +225,7 @@ onMounted(loadGoods);
 <template>
   <div class="p-5">
     <ElCard shadow="never">
-      <ElTabs v-model="activeTab" @tab-change="onTabChange">
+      <ElTabs v-model="activeTab" type="border-card" @tab-change="onTabChange">
         <!-- ---------- 商品 ---------- -->
         <ElTabPane label="兑换商品" name="goods">
           <ElAlert

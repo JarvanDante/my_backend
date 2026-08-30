@@ -459,7 +459,7 @@ onMounted(async () => {
 <template>
   <div class="p-5">
     <ElCard shadow="never">
-      <ElTabs v-model="activeTab" @tab-change="onTabChange">
+      <ElTabs v-model="activeTab" type="border-card" @tab-change="onTabChange">
         <!-- ---------------------------- 活动 ---------------------------- -->
         <ElTabPane label="抽奖活动" name="activity">
           <div class="mb-4 flex flex-wrap items-center gap-2">

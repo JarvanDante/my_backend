@@ -157,7 +157,7 @@ onMounted(loadCodes);
 <template>
   <div>
     <ElCard shadow="never">
-      <ElTabs v-model="activeTab" @tab-change="onTab">
+      <ElTabs v-model="activeTab" type="border-card" @tab-change="onTab">
         <ElTabPane label="兑换码" name="codes">
           <div class="mb-3 flex flex-wrap items-center gap-2">
             <ElInput v-model="search.keyword" placeholder="码/名称" clearable style="width: 160px" @keyup.enter="doSearch" />
