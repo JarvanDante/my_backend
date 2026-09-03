@@ -139,6 +139,9 @@ export function getComicsChaptersApi(
     { params },
   );
 }
+export function getComicsChapterApi(id: number) {
+  return requestClient.get<ComicsApi.Chapter>(`/comics-chapters/${id}`);
+}
 export function createComicsChapterApi(
   comicsId: number,
   body: ComicsApi.ChapterBody,

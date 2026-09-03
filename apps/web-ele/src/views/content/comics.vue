@@ -29,6 +29,7 @@ import {
   createComicsChapterApi,
   deleteComicsApi,
   deleteComicsChapterApi,
+  getComicsChapterApi,
   getComicsChaptersApi,
   getComicsListApi,
   getMediaComicsListApi,
@@ -239,7 +240,7 @@ async function handleDelete(row: ComicsApi.Item) {
 const chapterDialog = ref(false);
 const chapterLoading = ref(false);
 const chapters = ref<ComicsApi.Chapter[]>([]);
-const chapterPage = reactive({ current: 1, size: 50, total: 0 });
+const chapterPage = reactive({ current: 1, size: 20, total: 0 });
 const current = ref<ComicsApi.Item | null>(null);
 
 async function openChapters(row: ComicsApi.Item) {
@@ -279,16 +280,29 @@ function openChCreate() {
   });
   chDialog.value = true;
 }
-function openChEdit(row: ComicsApi.Chapter) {
+async function openChEdit(row: ComicsApi.Chapter) {
   chIsEdit.value = true;
   Object.assign(chForm, {
     id: row.id,
     seq: row.seq,
     title: row.title,
-    picText: (row.pics || []).map((p) => p.url).join("\n"),
+    picText: "",
     status: row.status,
   });
   chDialog.value = true;
+  chSaving.value = true;
+  try {
+    const detail = await getComicsChapterApi(row.id);
+    Object.assign(chForm, {
+      id: detail.id,
+      seq: detail.seq,
+      title: detail.title,
+      picText: (detail.pics || []).map((p) => p.url).join("\n"),
+      status: detail.status,
+    });
+  } finally {
+    chSaving.value = false;
+  }
 }
 async function saveChapter() {
   if (!current.value) return;
