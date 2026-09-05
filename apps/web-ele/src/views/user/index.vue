@@ -662,7 +662,11 @@ onMounted(async () => {
         </ElTableColumn>
         <ElTableColumn prop="movie_fee_rate" label="视频分成(%)" width="100" align="center" />
         <ElTableColumn prop="post_fee_rate" label="帖子分成(%)" width="100" align="center" />
-        <ElTableColumn prop="channel" label="渠道名" width="90" align="center" />
+        <ElTableColumn label="渠道名" width="90" align="center">
+          <template #default="{ row }">
+            {{ row.channel || "-" }}
+          </template>
+        </ElTableColumn>
         <ElTableColumn label="状态" width="80" align="center">
           <template #default="{ row }">
             <ElTag :type="row.is_disabled === 0 ? 'success' : 'danger'" size="small">
