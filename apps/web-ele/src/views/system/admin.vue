@@ -24,6 +24,7 @@ import {
   deleteAdminApi,
   getAdminListApi,
   getRoleListApi,
+  resetAdminTotpApi,
   type SystemApi,
   updateAdminApi,
 } from "#/api/core/system";
@@ -129,6 +130,17 @@ async function handleSave() {
   }
 }
 
+async function handleResetTotp(row: SystemApi.AdminItem) {
+  await ElMessageBox.confirm(
+    `确认解绑管理员「${row.username}」的谷歌验证器? 下次登录需重新扫码绑定。`,
+    "提示",
+    { type: "warning" },
+  );
+  await resetAdminTotpApi(row.id);
+  ElMessage.success("已解绑");
+  fetchList();
+}
+
 async function handleDelete(row: SystemApi.AdminItem) {
   await ElMessageBox.confirm(`确认删除管理员「${row.username}」?`, "提示", {
     type: "warning",
@@ -166,10 +178,30 @@ onMounted(fetchList);
             </ElTag>
           </template>
         </ElTableColumn>
+        <ElTableColumn label="谷歌验证器" width="110" align="center">
+          <template #default="{ row }">
+            <ElTag :type="row.totp_bound === 1 ? 'success' : 'info'" size="small">
+              {{ row.totp_bound === 1 ? "已绑定" : "未绑定" }}
+            </ElTag>
+          </template>
+        </ElTableColumn>
+        <ElTableColumn label="绑定时间" width="170">
+          <template #default="{ row }">
+            {{ row.totp_bound_at || "-" }}
+          </template>
+        </ElTableColumn>
         <ElTableColumn prop="last_login_at" label="最后登录" width="170" />
-        <ElTableColumn label="操作" width="140" fixed="right">
+        <ElTableColumn label="操作" width="200" fixed="right">
           <template #default="{ row }">
             <ElButton link type="primary" @click="openEdit(row)">编辑</ElButton>
+            <ElButton
+              v-if="row.totp_bound === 1"
+              link
+              type="warning"
+              @click="handleResetTotp(row)"
+            >
+              解绑验证器
+            </ElButton>
             <ElButton link type="danger" @click="handleDelete(row)">删除</ElButton>
           </template>
         </ElTableColumn>

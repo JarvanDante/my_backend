@@ -55,6 +55,10 @@
   "qq": "QQ",
   "gitHub": "GitHub",
   "google": "Google",
+  "totpBindTip": "Scan the QR code with Google Authenticator",
+  "totpSecretLabel": "Secret",
+  "totpCodePlaceholder": "Enter the 6-digit code",
+  "totpVerifyTip": "Enter your Google Authenticator code",
   "loginAgainTitle": "Please Log In Again",
   "loginAgainSubTitle": "Your login session has expired. Please log in again to continue.",
   "layout": {

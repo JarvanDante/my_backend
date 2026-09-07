@@ -34,7 +34,18 @@ export const useAuthStore = defineStore("auth", () => {
     let userInfo: null | UserInfo = null;
     try {
       loginLoading.value = true;
-      const { accessToken } = await loginApi(params);
+      const loginRes = await loginApi(params);
+      if (loginRes.needTotp && !loginRes.accessToken) {
+        return {
+          userInfo: null,
+          totp: {
+            bound: loginRes.totpBound,
+            qr: loginRes.totpQr,
+            secret: loginRes.totpSecret,
+          },
+        };
+      }
+      const { accessToken } = loginRes;
 
       // 如果成功获取到 accessToken
       if (accessToken) {
@@ -76,6 +87,7 @@ export const useAuthStore = defineStore("auth", () => {
 
     return {
       userInfo,
+      totp: null,
     };
   }
 

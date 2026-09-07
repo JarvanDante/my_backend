@@ -55,6 +55,10 @@
   "qq": "QQ",
   "gitHub": "GitHub",
   "google": "Google",
+  "totpBindTip": "请使用谷歌验证器扫描二维码绑定",
+  "totpSecretLabel": "密钥",
+  "totpCodePlaceholder": "请输入6位验证码",
+  "totpVerifyTip": "请输入谷歌验证器验证码",
   "loginAgainTitle": "重新登录",
   "loginAgainSubTitle": "您的登录状态已过期，请重新登录以继续。",
   "layout": {
