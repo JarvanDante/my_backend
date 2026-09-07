@@ -5,6 +5,7 @@ export namespace AuthApi {
   export interface LoginParams {
     password?: string;
     username?: string;
+    totp_code?: string;
   }
 
   /** 后端管理员信息(/auth/login 与 /auth/info 的 data.admin / data) */
@@ -19,8 +20,14 @@ export namespace AuthApi {
 
   /** 登录返回 data */
   export interface LoginResult {
-    token: string;
-    admin: AdminInfo;
+    token?: string;
+    admin?: AdminInfo;
+    need_totp?: boolean;
+    totp_bound?: boolean;
+    totp_qr?: string;
+    totp_secret?: string;
+    site_code?: string;
+    site_name?: string;
   }
 }
 
@@ -35,6 +42,10 @@ export async function loginApi(data: AuthApi.LoginParams) {
   return {
     accessToken: response.token,
     admin: response.admin,
+    needTotp: !!response.need_totp,
+    totpBound: !!response.totp_bound,
+    totpQr: response.totp_qr || "",
+    totpSecret: response.totp_secret || "",
   };
 }
 

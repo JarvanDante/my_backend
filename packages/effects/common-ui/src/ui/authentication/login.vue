@@ -103,6 +103,8 @@ defineExpose({
 
     <Form />
 
+    <slot name="extra"></slot>
+
     <div
       v-if="showRememberMe || showForgetPassword"
       class="mb-6 flex justify-between"

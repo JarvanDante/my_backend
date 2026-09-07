@@ -18,6 +18,8 @@ export namespace SystemApi {
     role_name: string;
     status: number;
     last_login_at: string;
+    totp_bound: number;
+    totp_bound_at: string;
   }
 
   export interface AdminListData {
@@ -135,4 +137,8 @@ export async function updateAdminApi(p: {
 
 export async function deleteAdminApi(id: number) {
   return requestClient.delete(`/admins/${id}`);
+}
+
+export async function resetAdminTotpApi(id: number) {
+  return requestClient.delete(`/admins/${id}/totp`);
 }
