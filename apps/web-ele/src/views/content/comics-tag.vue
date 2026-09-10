@@ -164,6 +164,11 @@ onMounted(fetchList);
       <ElTable v-loading="loading" :data="list" border stripe>
         <ElTableColumn prop="id" label="ID" width="80" />
         <ElTableColumn prop="name" label="标签名" min-width="160" />
+        <ElTableColumn label="作品数" width="90" align="center">
+          <template #default="{ row }">
+            {{ row.use_count ?? 0 }}
+          </template>
+        </ElTableColumn>
         <ElTableColumn prop="rank" label="排序权重" width="100" align="center" />
         <ElTableColumn label="状态" width="90" align="center">
           <template #default="{ row }">

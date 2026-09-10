@@ -15,6 +15,7 @@ export namespace TagApi {
     name: string;
     rank: number;
     status: number;
+    use_count?: number;
     created_at: string;
   }
   export interface ListParams {
