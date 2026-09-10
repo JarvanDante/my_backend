@@ -5,7 +5,8 @@ import { requestClient } from "#/api/request";
  *
  * style: 1=1大2小横图 2=2小横图 3=1大横图 4=2竖图 5=竖图横滑 6=横图横滑 7=竖图3X3
  * icon: 1最新 2星星 3火
- * 检索条件按 category_ids + tag_ids。
+ * 检索条件为 JSON（tag_id/cat_id/order 等），底层查 Postgres comics 表。
+ * 位置：comic_home=漫画首页，cat_{id}=H5 分类 Tab。
  */
 export namespace ComicsModuleApi {
   export interface Item {
@@ -18,6 +19,7 @@ export namespace ComicsModuleApi {
     category_names: string[];
     tag_ids: number[];
     tag_names: string[];
+    filter: string;
     size: number;
     rank: number;
     status: number;
@@ -39,6 +41,7 @@ export namespace ComicsModuleApi {
     icon?: number;
     category_ids?: number[];
     tag_ids?: number[];
+    filter?: string;
     size?: number;
     rank?: number;
     status?: number;
