@@ -43,13 +43,15 @@ const kindLabel = (kind: number) => {
   if (kind === 3) return "榜单";
   return "";
 };
-const posOpts = computed(() => [
-  { label: "漫画首页", value: "comic_home" },
-  ...categories.value.map((c) => ({
-    label: kindLabel(c.kind) ? `${c.name}（${kindLabel(c.kind)}）` : c.name,
-    value: `cat_${c.id}`,
-  })),
-]);
+const posOpts = computed(() =>
+  [...categories.value]
+    .sort((a, b) => (b.rank || 0) - (a.rank || 0) || b.id - a.id)
+    .map((c) => ({
+      label: kindLabel(c.kind) ? `${c.name}（${kindLabel(c.kind)}）` : c.name,
+      value: `cat_${c.id}`,
+    })),
+);
+const defaultPos = () => posOpts.value[0]?.value || "";
 const orderOpts = [
   { label: "最新", value: "new" },
   { label: "随机", value: "rand" },
@@ -211,7 +213,7 @@ const buildFilter = (d: FilterDraft) => {
 const emptyForm = () => ({
   id: 0,
   name: "",
-  position: "comic_home",
+  position: "",
   style: 7,
   icon: 1,
   size: 9,
@@ -254,6 +256,7 @@ const rules = {
 function openCreate() {
   isEdit.value = false;
   Object.assign(form, emptyForm());
+  form.position = defaultPos();
   dialog.value = true;
 }
 function openEdit(row: ComicsModuleApi.Item) {
@@ -262,7 +265,10 @@ function openEdit(row: ComicsModuleApi.Item) {
   Object.assign(form, {
     id: row.id,
     name: row.name,
-    position: row.position || "comic_home",
+    position:
+      row.position && row.position !== "comic_home"
+        ? row.position
+        : defaultPos(),
     style: row.style || 7,
     icon: row.icon || 1,
     size: row.size || 9,
@@ -447,7 +453,7 @@ onMounted(async () => {
               :value="o.value"
             />
           </ElSelect>
-          <p class="mt-1 text-xs text-gray-400">挂在哪个 Tab，不管楼层出什么内容。</p>
+          <p class="mt-1 text-xs text-gray-400">挂在哪个分类 Tab。默认是权重最高的分类。</p>
         </ElFormItem>
         <ElFormItem label="样式" prop="style">
           <ElSelect v-model="form.style" style="width: 260px">
