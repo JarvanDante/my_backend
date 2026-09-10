@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { onMounted, reactive, ref } from "vue";
+import { computed, onMounted, reactive, ref } from "vue";
 
 import {
   ElButton,
@@ -37,7 +37,46 @@ import { getTagListApi, type TagApi } from "#/api/core/tag";
 defineOptions({ name: "ContentComicsModule" });
 
 const COMICS_TYPE = 4;
-const posOpts = [{ label: "漫画首页", value: "comic_home" }];
+const kindLabel = (kind: number) => {
+  if (kind === 1) return "新更";
+  if (kind === 2) return "推荐";
+  if (kind === 3) return "榜单";
+  return "";
+};
+const posOpts = computed(() => [
+  { label: "漫画首页", value: "comic_home" },
+  ...categories.value.map((c) => ({
+    label: kindLabel(c.kind) ? `${c.name}（${kindLabel(c.kind)}）` : c.name,
+    value: `cat_${c.id}`,
+  })),
+]);
+const FILTER_HELP = [
+  { key: "tag_id", text: "标签 ID，多个逗号分隔，命中任一。查 comics.tags，不是标题。" },
+  { key: "cat_id", text: "作品分类 ID，多个逗号分隔，命中任一。查 comics.category 名称。" },
+  { key: "order", text: "new 最新 / rand 随机 / hot 最多观看 / like 最多点赞。默认 new。" },
+  { key: "is_end", text: "y 只出完结 / n 只出连载。不填不限。" },
+  { key: "pay_type", text: "vip VIP / coin 金币 / free 免费。不填不限。" },
+  { key: "ids", text: "指定作品 ID，逗号分隔。" },
+  { key: "keywords", text: "标题或作者模糊匹配。模块一般不用。" },
+  { key: "recommend", text: "y 只出推荐作品。" },
+];
+const orderOpts = [
+  { label: "最新", value: "new" },
+  { label: "随机", value: "rand" },
+  { label: "最多观看", value: "hot" },
+  { label: "最多点赞", value: "like" },
+];
+const endOpts = [
+  { label: "不限", value: "" },
+  { label: "完结", value: "y" },
+  { label: "连载", value: "n" },
+];
+const payOpts = [
+  { label: "不限", value: "" },
+  { label: "VIP", value: "vip" },
+  { label: "金币", value: "coin" },
+  { label: "免费", value: "free" },
+];
 const styleOpts = [
   { label: "样式1 1大2小 横图", value: 1 },
   { label: "样式2 2小 横图", value: 2 },
@@ -58,8 +97,8 @@ const iconOpts = [
 const iconMap: Record<number, string> = Object.fromEntries(
   iconOpts.map((o) => [o.value, o.label]),
 );
-const posMap: Record<string, string> = Object.fromEntries(
-  posOpts.map((o) => [o.value, o.label]),
+const posMap = computed(() =>
+  Object.fromEntries(posOpts.value.map((o) => [o.value, o.label])),
 );
 const statusOpts = [
   { label: "全部状态", value: "" },
@@ -123,19 +162,82 @@ const dialog = ref(false);
 const isEdit = ref(false);
 const saving = ref(false);
 const formRef = ref();
+type FilterDraft = {
+  tag_id: number[];
+  cat_id: number[];
+  order: string;
+  is_end: string;
+  pay_type: string;
+  ids: string;
+  keywords: string;
+  recommend: boolean;
+};
+const emptyDraft = (): FilterDraft => ({
+  tag_id: [],
+  cat_id: [],
+  order: "new",
+  is_end: "",
+  pay_type: "",
+  ids: "",
+  keywords: "",
+  recommend: false,
+});
+const parseFilter = (raw?: string, cats: number[] = [], tags: number[] = []): FilterDraft => {
+  const draft = emptyDraft();
+  draft.cat_id = [...cats];
+  draft.tag_id = [...tags];
+  if (!raw) return draft;
+  try {
+    const obj = JSON.parse(raw) as Record<string, unknown>;
+    const toIds = (v: unknown) =>
+      String(v ?? "")
+        .split(",")
+        .map((s) => Number(s.trim()))
+        .filter((n) => n > 0);
+    if (obj.tag_id !== undefined) draft.tag_id = toIds(obj.tag_id);
+    if (obj.cat_id !== undefined) draft.cat_id = toIds(obj.cat_id);
+    if (typeof obj.order === "string" && obj.order) draft.order = obj.order;
+    if (obj.is_end === "y" || obj.is_end === "n") draft.is_end = obj.is_end;
+    if (typeof obj.pay_type === "string") draft.pay_type = obj.pay_type;
+    if (obj.ids !== undefined) draft.ids = String(obj.ids);
+    if (typeof obj.keywords === "string") draft.keywords = obj.keywords;
+    draft.recommend = obj.recommend === "y" || obj.recommend === 1 || obj.recommend === true;
+  } catch {
+    /* 旧数据无 JSON 时用分类/标签兜底 */
+  }
+  return draft;
+};
+const buildFilter = (d: FilterDraft) => {
+  const obj: Record<string, string> = { order: d.order || "new" };
+  if (d.tag_id.length) obj.tag_id = d.tag_id.join(",");
+  if (d.cat_id.length) obj.cat_id = d.cat_id.join(",");
+  if (d.is_end) obj.is_end = d.is_end;
+  if (d.pay_type) obj.pay_type = d.pay_type;
+  if (d.ids.trim()) obj.ids = d.ids.trim();
+  if (d.keywords.trim()) obj.keywords = d.keywords.trim();
+  if (d.recommend) obj.recommend = "y";
+  return JSON.stringify(obj);
+};
 const emptyForm = () => ({
   id: 0,
   name: "",
   position: "comic_home",
   style: 7,
   icon: 1,
-  category_ids: [] as number[],
-  tag_ids: [] as number[],
   size: 9,
   rank: 0,
   status: 1,
+  draft: emptyDraft(),
+  filterText: '{"order":"new"}',
 });
 const form = reactive(emptyForm());
+const syncFilterText = () => {
+  form.filterText = buildFilter(form.draft);
+};
+const applyFilterText = () => {
+  form.draft = parseFilter(form.filterText, form.draft.cat_id, form.draft.tag_id);
+  syncFilterText();
+};
 const rules = {
   name: [{ required: true, message: "名称必填", trigger: "blur" }],
   position: [{ required: true, message: "请选择位置", trigger: "change" }],
@@ -149,17 +251,18 @@ function openCreate() {
 }
 function openEdit(row: ComicsModuleApi.Item) {
   isEdit.value = true;
+  const draft = parseFilter(row.filter, row.category_ids || [], row.tag_ids || []);
   Object.assign(form, {
     id: row.id,
     name: row.name,
     position: row.position || "comic_home",
     style: row.style || 7,
     icon: row.icon || 1,
-    category_ids: [...(row.category_ids || [])],
-    tag_ids: [...(row.tag_ids || [])],
     size: row.size || 9,
     rank: row.rank || 0,
     status: row.status,
+    draft,
+    filterText: buildFilter(draft),
   });
   dialog.value = true;
 }
@@ -171,8 +274,9 @@ async function handleSave() {
     position: form.position,
     style: Number(form.style) || 7,
     icon: Number(form.icon) || 1,
-    category_ids: form.category_ids,
-    tag_ids: form.tag_ids,
+    category_ids: form.draft.cat_id,
+    tag_ids: form.draft.tag_id,
+    filter: buildFilter(form.draft),
     size: Number(form.size) || 9,
     rank: Number(form.rank) || 0,
     status: form.status,
@@ -322,13 +426,13 @@ onMounted(async () => {
       </div>
     </ElCard>
 
-    <ElDialog v-model="dialog" :title="isEdit ? '编辑模块' : '新增模块'" width="560px">
+    <ElDialog v-model="dialog" :title="isEdit ? '编辑模块' : '新增模块'" width="680px">
       <ElForm ref="formRef" :model="form" :rules="rules" label-width="100px">
         <ElFormItem label="名称" prop="name">
-          <ElInput v-model="form.name" placeholder="如: 新更 / 推荐" maxlength="64" />
+          <ElInput v-model="form.name" placeholder="如: 丝袜联盟" maxlength="64" />
         </ElFormItem>
         <ElFormItem label="位置" prop="position">
-          <ElSelect v-model="form.position" style="width: 220px">
+          <ElSelect v-model="form.position" style="width: 260px">
             <ElOption
               v-for="o in posOpts"
               :key="o.value"
@@ -336,6 +440,9 @@ onMounted(async () => {
               :value="o.value"
             />
           </ElSelect>
+          <p class="mt-1 text-xs text-gray-400">
+            挂在哪个 Tab。漫画首页=未点分类；选韩漫等则只出现在该分类下。
+          </p>
         </ElFormItem>
         <ElFormItem label="样式" prop="style">
           <ElSelect v-model="form.style" style="width: 260px">
@@ -347,14 +454,15 @@ onMounted(async () => {
             />
           </ElSelect>
         </ElFormItem>
-        <ElFormItem label="分类">
+        <ElFormItem label="作品分类">
           <ElSelect
-            v-model="form.category_ids"
+            v-model="form.draft.cat_id"
             multiple
             clearable
             filterable
-            placeholder="从漫画分类多选，不选则不限分类"
+            placeholder="筛楼层里的漫画，不选则不限（挂普通分类时默认带上该分类）"
             style="width: 100%"
+            @change="syncFilterText"
           >
             <ElOption
               v-for="c in workCategories()"
@@ -363,16 +471,16 @@ onMounted(async () => {
               :value="c.id"
             />
           </ElSelect>
-          <p class="mt-1 text-xs text-gray-400">可多选。与标签同时生效：命中任一所选分类</p>
         </ElFormItem>
         <ElFormItem label="标签">
           <ElSelect
-            v-model="form.tag_ids"
+            v-model="form.draft.tag_id"
             multiple
             clearable
             filterable
-            placeholder="从漫画标签多选，不选则不限标签"
+            placeholder="筛楼层里的漫画，不选则不限标签"
             style="width: 100%"
+            @change="syncFilterText"
           >
             <ElOption
               v-for="t in tags"
@@ -381,7 +489,53 @@ onMounted(async () => {
               :value="t.id"
             />
           </ElSelect>
-          <p class="mt-1 text-xs text-gray-400">可多选。与分类同时生效：命中任一所选标签</p>
+        </ElFormItem>
+        <ElFormItem label="内容排序">
+          <ElSelect v-model="form.draft.order" style="width: 180px" @change="syncFilterText">
+            <ElOption v-for="o in orderOpts" :key="o.value" :label="o.label" :value="o.value" />
+          </ElSelect>
+        </ElFormItem>
+        <ElFormItem label="连载">
+          <ElSelect v-model="form.draft.is_end" style="width: 140px" @change="syncFilterText">
+            <ElOption v-for="o in endOpts" :key="o.value" :label="o.label" :value="o.value" />
+          </ElSelect>
+        </ElFormItem>
+        <ElFormItem label="付费">
+          <ElSelect v-model="form.draft.pay_type" style="width: 140px" @change="syncFilterText">
+            <ElOption v-for="o in payOpts" :key="o.value" :label="o.label" :value="o.value" />
+          </ElSelect>
+        </ElFormItem>
+        <ElFormItem label="仅推荐">
+          <ElRadioGroup v-model="form.draft.recommend" @change="syncFilterText">
+            <ElRadio :value="false">否</ElRadio>
+            <ElRadio :value="true">是</ElRadio>
+          </ElRadioGroup>
+        </ElFormItem>
+        <ElFormItem label="指定作品">
+          <ElInput
+            v-model="form.draft.ids"
+            placeholder="可选，作品 ID 逗号分隔"
+            @change="syncFilterText"
+          />
+        </ElFormItem>
+        <ElFormItem label="检索条件">
+          <ElInput
+            v-model="form.filterText"
+            type="textarea"
+            :rows="3"
+            placeholder='{"tag_id":"12","order":"rand"}'
+            @blur="applyFilterText"
+          />
+          <div class="mt-2 rounded bg-gray-50 px-3 py-2 text-xs leading-5 text-gray-500">
+            <p class="mb-1 text-gray-600">
+              查的是 comics 表属性（标签/分类/排序等），不是标题或简介。只出上架作品。分类和标签同时填则两边都要满足。
+            </p>
+            <p v-for="h in FILTER_HELP" :key="h.key">
+              <span class="font-mono text-gray-700">{{ h.key }}</span>
+              ：{{ h.text }}
+            </p>
+            <p class="mt-1">示例：{"tag_id":"12","order":"rand"}</p>
+          </div>
         </ElFormItem>
         <ElFormItem label="展示数量">
           <ElInputNumber v-model="form.size" :min="1" :max="30" />
