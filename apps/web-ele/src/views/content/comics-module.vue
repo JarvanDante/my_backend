@@ -50,16 +50,6 @@ const posOpts = computed(() => [
     value: `cat_${c.id}`,
   })),
 ]);
-const FILTER_HELP = [
-  { key: "tag_id", text: "标签 ID，多个逗号分隔，命中任一。查 comics.tags，不是标题。" },
-  { key: "cat_id", text: "作品分类 ID，多个逗号分隔，命中任一。查 comics.category 名称。" },
-  { key: "order", text: "new 最新 / rand 随机 / hot 最多观看 / like 最多点赞。默认 new。" },
-  { key: "is_end", text: "y 只出完结 / n 只出连载。不填不限。" },
-  { key: "pay_type", text: "vip VIP / coin 金币 / free 免费。不填不限。" },
-  { key: "ids", text: "指定作品 ID，逗号分隔。" },
-  { key: "keywords", text: "标题或作者模糊匹配。模块一般不用。" },
-  { key: "recommend", text: "y 只出推荐作品。" },
-];
 const orderOpts = [
   { label: "最新", value: "new" },
   { label: "随机", value: "rand" },
@@ -228,15 +218,32 @@ const emptyForm = () => ({
   rank: 0,
   status: 1,
   draft: emptyDraft(),
-  filterText: '{"order":"new"}',
 });
 const form = reactive(emptyForm());
-const syncFilterText = () => {
-  form.filterText = buildFilter(form.draft);
+const posCatId = () => {
+  const m = /^cat_(\d+)$/.exec(form.position);
+  return m ? Number(m[1]) : 0;
 };
-const applyFilterText = () => {
-  form.draft = parseFilter(form.filterText, form.draft.cat_id, form.draft.tag_id);
-  syncFilterText();
+const posWorkCategory = () => {
+  const id = posCatId();
+  return categories.value.find((c) => c.id === id && c.kind === 0) || null;
+};
+const extraWorkCategories = () => {
+  const pinned = posCatId();
+  return workCategories().filter((c) => c.id !== pinned);
+};
+const contentCatIds = () => {
+  const pinned = posWorkCategory()?.id;
+  return form.draft.cat_id.filter((id) => id !== pinned);
+};
+const filterPreview = computed(() =>
+  buildFilter({ ...form.draft, cat_id: contentCatIds() }),
+);
+const onPositionChange = () => {
+  const pinned = posWorkCategory()?.id;
+  if (pinned) {
+    form.draft.cat_id = form.draft.cat_id.filter((id) => id !== pinned);
+  }
 };
 const rules = {
   name: [{ required: true, message: "名称必填", trigger: "blur" }],
@@ -262,8 +269,8 @@ function openEdit(row: ComicsModuleApi.Item) {
     rank: row.rank || 0,
     status: row.status,
     draft,
-    filterText: buildFilter(draft),
   });
+  onPositionChange();
   dialog.value = true;
 }
 
@@ -274,9 +281,9 @@ async function handleSave() {
     position: form.position,
     style: Number(form.style) || 7,
     icon: Number(form.icon) || 1,
-    category_ids: form.draft.cat_id,
+    category_ids: contentCatIds(),
     tag_ids: form.draft.tag_id,
-    filter: buildFilter(form.draft),
+    filter: buildFilter({ ...form.draft, cat_id: contentCatIds() }),
     size: Number(form.size) || 9,
     rank: Number(form.rank) || 0,
     status: form.status,
@@ -426,13 +433,13 @@ onMounted(async () => {
       </div>
     </ElCard>
 
-    <ElDialog v-model="dialog" :title="isEdit ? '编辑模块' : '新增模块'" width="680px">
+    <ElDialog v-model="dialog" :title="isEdit ? '编辑模块' : '新增模块'" width="560px">
       <ElForm ref="formRef" :model="form" :rules="rules" label-width="100px">
         <ElFormItem label="名称" prop="name">
           <ElInput v-model="form.name" placeholder="如: 丝袜联盟" maxlength="64" />
         </ElFormItem>
         <ElFormItem label="位置" prop="position">
-          <ElSelect v-model="form.position" style="width: 260px">
+          <ElSelect v-model="form.position" style="width: 260px" @change="onPositionChange">
             <ElOption
               v-for="o in posOpts"
               :key="o.value"
@@ -440,9 +447,7 @@ onMounted(async () => {
               :value="o.value"
             />
           </ElSelect>
-          <p class="mt-1 text-xs text-gray-400">
-            挂在哪个 Tab。漫画首页=未点分类；选韩漫等则只出现在该分类下。
-          </p>
+          <p class="mt-1 text-xs text-gray-400">挂在哪个 Tab，不管楼层出什么内容。</p>
         </ElFormItem>
         <ElFormItem label="样式" prop="style">
           <ElSelect v-model="form.style" style="width: 260px">
@@ -454,23 +459,28 @@ onMounted(async () => {
             />
           </ElSelect>
         </ElFormItem>
-        <ElFormItem label="作品分类">
+        <ElFormItem v-if="posWorkCategory()" label="作品分类">
+          <p class="text-xs leading-5 text-gray-500">
+            已按位置限定为「{{ posWorkCategory()?.name }}」，下面用标签等继续收窄即可。
+          </p>
+        </ElFormItem>
+        <ElFormItem v-else label="作品分类">
           <ElSelect
             v-model="form.draft.cat_id"
             multiple
             clearable
             filterable
-            placeholder="筛楼层里的漫画，不选则不限（挂普通分类时默认带上该分类）"
+            placeholder="楼层出哪些漫画，不选则不限"
             style="width: 100%"
-            @change="syncFilterText"
           >
             <ElOption
-              v-for="c in workCategories()"
+              v-for="c in extraWorkCategories()"
               :key="c.id"
               :label="c.name"
               :value="c.id"
             />
           </ElSelect>
+          <p class="mt-1 text-xs text-gray-400">和位置无关。多选为命中任一，再和标签同时生效。</p>
         </ElFormItem>
         <ElFormItem label="标签">
           <ElSelect
@@ -478,9 +488,8 @@ onMounted(async () => {
             multiple
             clearable
             filterable
-            placeholder="筛楼层里的漫画，不选则不限标签"
+            placeholder="不选则不限标签"
             style="width: 100%"
-            @change="syncFilterText"
           >
             <ElOption
               v-for="t in tags"
@@ -491,51 +500,32 @@ onMounted(async () => {
           </ElSelect>
         </ElFormItem>
         <ElFormItem label="内容排序">
-          <ElSelect v-model="form.draft.order" style="width: 180px" @change="syncFilterText">
+          <ElSelect v-model="form.draft.order" style="width: 180px">
             <ElOption v-for="o in orderOpts" :key="o.value" :label="o.label" :value="o.value" />
           </ElSelect>
         </ElFormItem>
         <ElFormItem label="连载">
-          <ElSelect v-model="form.draft.is_end" style="width: 140px" @change="syncFilterText">
+          <ElSelect v-model="form.draft.is_end" style="width: 140px">
             <ElOption v-for="o in endOpts" :key="o.value" :label="o.label" :value="o.value" />
           </ElSelect>
         </ElFormItem>
         <ElFormItem label="付费">
-          <ElSelect v-model="form.draft.pay_type" style="width: 140px" @change="syncFilterText">
+          <ElSelect v-model="form.draft.pay_type" style="width: 140px">
             <ElOption v-for="o in payOpts" :key="o.value" :label="o.label" :value="o.value" />
           </ElSelect>
         </ElFormItem>
         <ElFormItem label="仅推荐">
-          <ElRadioGroup v-model="form.draft.recommend" @change="syncFilterText">
+          <ElRadioGroup v-model="form.draft.recommend">
             <ElRadio :value="false">否</ElRadio>
             <ElRadio :value="true">是</ElRadio>
           </ElRadioGroup>
         </ElFormItem>
         <ElFormItem label="指定作品">
-          <ElInput
-            v-model="form.draft.ids"
-            placeholder="可选，作品 ID 逗号分隔"
-            @change="syncFilterText"
-          />
+          <ElInput v-model="form.draft.ids" placeholder="可选，作品 ID 逗号分隔" />
         </ElFormItem>
-        <ElFormItem label="检索条件">
-          <ElInput
-            v-model="form.filterText"
-            type="textarea"
-            :rows="3"
-            placeholder='{"tag_id":"12","order":"rand"}'
-            @blur="applyFilterText"
-          />
-          <div class="mt-2 rounded bg-gray-50 px-3 py-2 text-xs leading-5 text-gray-500">
-            <p class="mb-1 text-gray-600">
-              查的是 comics 表属性（标签/分类/排序等），不是标题或简介。只出上架作品。分类和标签同时填则两边都要满足。
-            </p>
-            <p v-for="h in FILTER_HELP" :key="h.key">
-              <span class="font-mono text-gray-700">{{ h.key }}</span>
-              ：{{ h.text }}
-            </p>
-            <p class="mt-1">示例：{"tag_id":"12","order":"rand"}</p>
-          </div>
+        <ElFormItem label="检索预览">
+          <p class="break-all font-mono text-xs text-gray-500">{{ filterPreview }}</p>
+          <p class="mt-1 text-xs text-gray-400">保存时写入。查分类/标签等属性，不是标题。</p>
         </ElFormItem>
         <ElFormItem label="展示数量">
           <ElInputNumber v-model="form.size" :min="1" :max="30" />
