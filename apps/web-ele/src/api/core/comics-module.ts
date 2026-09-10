@@ -1,12 +1,12 @@
 import { requestClient } from "#/api/request";
 
 /**
- * 漫画首页模块(对接 my_service /backend/comics-modules*)。
+ * 漫画分类模块(对接 my_service /backend/comics-modules*)。
  *
  * style: 1=1大2小横图 2=2小横图 3=1大横图 4=2竖图 5=竖图横滑 6=横图横滑 7=竖图3X3
  * icon: 1最新 2星星 3火
  * 检索条件为 JSON（tag_id/cat_id/order 等），底层查 Postgres comics 表。
- * 位置：comic_home=漫画首页，cat_{id}=H5 分类 Tab。
+ * 位置：cat_{id}=H5 分类 Tab，按分类权重排。
  */
 export namespace ComicsModuleApi {
   export interface Item {
