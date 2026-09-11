@@ -42,13 +42,7 @@ const styleOpts = [
   { label: "样式5 竖图横滑", value: 5 },
   { label: "样式6 横图横滑", value: 6 },
   { label: "样式7 竖图3X3", value: 7 },
-  { label: "样式8 竖图3X2", value: 8 },
 ];
-const defaultSizeOf = (style: number) => {
-  if (style === 7) return 9;
-  if (style === 5 || style === 6) return 10;
-  return 6;
-};
 const styleMap: Record<number, string> = Object.fromEntries(
   styleOpts.map((o) => [o.value, o.label]),
 );
@@ -138,9 +132,6 @@ const emptyForm = () => ({
   status: 1,
 });
 const form = reactive(emptyForm());
-const onStyleChange = (style: number) => {
-  form.size = defaultSizeOf(style);
-};
 const rules = {
   name: [{ required: true, message: "名称必填", trigger: "blur" }],
   position: [{ required: true, message: "请选择位置", trigger: "change" }],
@@ -178,7 +169,7 @@ async function handleSave() {
     icon: Number(form.icon) || 1,
     category_ids: form.category_ids,
     tag_ids: form.tag_ids,
-    size: Number(form.size) || defaultSizeOf(Number(form.style) || 2),
+    size: Number(form.size) || 6,
     rank: Number(form.rank) || 0,
     status: form.status,
   };
@@ -343,7 +334,7 @@ onMounted(async () => {
           </ElSelect>
         </ElFormItem>
         <ElFormItem label="样式" prop="style">
-          <ElSelect v-model="form.style" style="width: 260px" @change="onStyleChange">
+          <ElSelect v-model="form.style" style="width: 260px">
             <ElOption
               v-for="o in styleOpts"
               :key="o.value"
@@ -390,7 +381,7 @@ onMounted(async () => {
         </ElFormItem>
         <ElFormItem label="展示数量">
           <ElInputNumber v-model="form.size" :min="1" :max="30" />
-          <span class="ml-2 text-xs text-gray-400">3X2 默认 6，3X3 默认 9，前台按此数量出图</span>
+          <span class="ml-2 text-xs text-gray-400">3X3 填 6 即六宫格，填 9 即九宫格</span>
         </ElFormItem>
         <ElFormItem label="图标">
           <ElRadioGroup v-model="form.icon">
