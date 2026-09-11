@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { onMounted, reactive, ref } from "vue";
+import { computed, onMounted, reactive, ref } from "vue";
 
 import {
   ElButton,
@@ -34,8 +34,27 @@ import {
 defineOptions({ name: "ContentVideoModule" });
 
 const TAG_TYPE = 1;
-const DEFAULT_POS = "video_home";
-const posOpts = [{ label: "视频首页", value: DEFAULT_POS }];
+const HOME_POS = "video_home";
+const kindLabel = (kind: number) => {
+  if (kind === 1) return "新更";
+  if (kind === 2) return "推荐";
+  if (kind === 3) return "榜单";
+  return "";
+};
+const posOpts = computed(() =>
+  [...categories.value]
+    .sort((a, b) => (b.rank || 0) - (a.rank || 0) || b.id - a.id)
+    .map((c) => ({
+      label: kindLabel(c.kind) ? `${c.name}（${kindLabel(c.kind)}）` : c.name,
+      value: `cat_${c.id}`,
+    })),
+);
+const defaultPos = () => posOpts.value[0]?.value || "";
+const orderOpts = [
+  { label: "最新", value: "new" },
+  { label: "随机", value: "rand" },
+  { label: "最多观看", value: "hot" },
+];
 const styleOpts = [
   { label: "样式1 1大2小 横图", value: 1 },
   { label: "样式2 2小 横图", value: 2 },
@@ -56,8 +75,8 @@ const iconOpts = [
 const iconMap: Record<number, string> = Object.fromEntries(
   iconOpts.map((o) => [o.value, o.label]),
 );
-const posMap: Record<string, string> = Object.fromEntries(
-  posOpts.map((o) => [o.value, o.label]),
+const posMap = computed(() =>
+  Object.fromEntries(posOpts.value.map((o) => [o.value, o.label])),
 );
 const statusOpts = [
   { label: "全部状态", value: "" },
@@ -121,19 +140,87 @@ const dialog = ref(false);
 const isEdit = ref(false);
 const saving = ref(false);
 const formRef = ref();
+type FilterDraft = {
+  tag_id: number[];
+  cat_id: number[];
+  order: string;
+  ids: string;
+  keywords: string;
+};
+const emptyDraft = (): FilterDraft => ({
+  tag_id: [],
+  cat_id: [],
+  order: "new",
+  ids: "",
+  keywords: "",
+});
+const parseFilter = (raw?: string, cats: number[] = [], tags: number[] = []): FilterDraft => {
+  const draft = emptyDraft();
+  draft.cat_id = [...cats];
+  draft.tag_id = [...tags];
+  if (!raw) return draft;
+  try {
+    const obj = JSON.parse(raw) as Record<string, unknown>;
+    const toIds = (v: unknown) =>
+      String(v ?? "")
+        .split(",")
+        .map((s) => Number(s.trim()))
+        .filter((n) => n > 0);
+    if (obj.tag_id !== undefined) draft.tag_id = toIds(obj.tag_id);
+    if (obj.cat_id !== undefined) draft.cat_id = toIds(obj.cat_id);
+    if (typeof obj.order === "string" && obj.order) draft.order = obj.order;
+    if (obj.ids !== undefined) draft.ids = String(obj.ids);
+    if (typeof obj.keywords === "string") draft.keywords = obj.keywords;
+  } catch {
+    /* 旧数据无 JSON 时用分类/标签兜底 */
+  }
+  return draft;
+};
+const buildFilter = (d: FilterDraft) => {
+  const obj: Record<string, string> = { order: d.order || "new" };
+  if (d.tag_id.length) obj.tag_id = d.tag_id.join(",");
+  if (d.cat_id.length) obj.cat_id = d.cat_id.join(",");
+  if (d.ids.trim()) obj.ids = d.ids.trim();
+  if (d.keywords.trim()) obj.keywords = d.keywords.trim();
+  return JSON.stringify(obj);
+};
 const emptyForm = () => ({
   id: 0,
   name: "",
-  position: DEFAULT_POS,
-  style: 2,
+  position: "",
+  style: 7,
   icon: 1,
-  category_ids: [] as number[],
-  tag_ids: [] as number[],
-  size: 6,
+  size: 9,
   rank: 0,
   status: 1,
+  draft: emptyDraft(),
 });
 const form = reactive(emptyForm());
+const posCatId = () => {
+  const m = /^cat_(\d+)$/.exec(form.position);
+  return m ? Number(m[1]) : 0;
+};
+const posWorkCategory = () => {
+  const id = posCatId();
+  return categories.value.find((c) => c.id === id && c.kind === 0) || null;
+};
+const extraWorkCategories = () => {
+  const pinned = posCatId();
+  return workCategories().filter((c) => c.id !== pinned);
+};
+const contentCatIds = () => {
+  const pinned = posWorkCategory()?.id;
+  return form.draft.cat_id.filter((id) => id !== pinned);
+};
+const filterPreview = computed(() =>
+  buildFilter({ ...form.draft, cat_id: contentCatIds() }),
+);
+const onPositionChange = () => {
+  const pinned = posWorkCategory()?.id;
+  if (pinned) {
+    form.draft.cat_id = form.draft.cat_id.filter((id) => id !== pinned);
+  }
+};
 const rules = {
   name: [{ required: true, message: "名称必填", trigger: "blur" }],
   position: [{ required: true, message: "请选择位置", trigger: "change" }],
@@ -143,22 +230,25 @@ const rules = {
 function openCreate() {
   isEdit.value = false;
   Object.assign(form, emptyForm());
+  form.position = defaultPos();
   dialog.value = true;
 }
 function openEdit(row: MediaModuleApi.Item) {
   isEdit.value = true;
+  const draft = parseFilter(row.filter, row.category_ids || [], row.tag_ids || []);
   Object.assign(form, {
     id: row.id,
     name: row.name,
-    position: row.position || DEFAULT_POS,
-    style: row.style || 2,
+    position:
+      row.position && row.position !== HOME_POS ? row.position : defaultPos(),
+    style: row.style || 7,
     icon: row.icon || 1,
-    category_ids: [...(row.category_ids || [])],
-    tag_ids: [...(row.tag_ids || [])],
-    size: row.size || 6,
+    size: row.size || 9,
     rank: row.rank || 0,
     status: row.status,
+    draft,
   });
+  onPositionChange();
   dialog.value = true;
 }
 
@@ -167,11 +257,12 @@ async function handleSave() {
   const body = {
     name: form.name,
     position: form.position,
-    style: Number(form.style) || 2,
+    style: Number(form.style) || 7,
     icon: Number(form.icon) || 1,
-    category_ids: form.category_ids,
-    tag_ids: form.tag_ids,
-    size: Number(form.size) || 6,
+    category_ids: contentCatIds(),
+    tag_ids: form.draft.tag_id,
+    filter: buildFilter({ ...form.draft, cat_id: contentCatIds() }),
+    size: Number(form.size) || 9,
     rank: Number(form.rank) || 0,
     status: form.status,
   };
@@ -323,10 +414,10 @@ onMounted(async () => {
     <ElDialog v-model="dialog" :title="isEdit ? '编辑模块' : '新增模块'" width="560px">
       <ElForm ref="formRef" :model="form" :rules="rules" label-width="100px">
         <ElFormItem label="名称" prop="name">
-          <ElInput v-model="form.name" placeholder="如: 今日上新 / 推荐" maxlength="64" />
+          <ElInput v-model="form.name" placeholder="如: 今日上新" maxlength="64" />
         </ElFormItem>
         <ElFormItem label="位置" prop="position">
-          <ElSelect v-model="form.position" style="width: 220px">
+          <ElSelect v-model="form.position" style="width: 260px" @change="onPositionChange">
             <ElOption
               v-for="o in posOpts"
               :key="o.value"
@@ -334,6 +425,7 @@ onMounted(async () => {
               :value="o.value"
             />
           </ElSelect>
+          <p class="mt-1 text-xs text-gray-400">挂在哪个分类 Tab。默认是权重最高的分类。</p>
         </ElFormItem>
         <ElFormItem label="样式" prop="style">
           <ElSelect v-model="form.style" style="width: 260px">
@@ -345,31 +437,36 @@ onMounted(async () => {
             />
           </ElSelect>
         </ElFormItem>
-        <ElFormItem label="分类">
+        <ElFormItem v-if="posWorkCategory()" label="作品分类">
+          <p class="text-xs leading-5 text-gray-500">
+            已按位置限定为「{{ posWorkCategory()?.name }}」，下面用标签等继续收窄即可。
+          </p>
+        </ElFormItem>
+        <ElFormItem v-else label="作品分类">
           <ElSelect
-            v-model="form.category_ids"
+            v-model="form.draft.cat_id"
             multiple
             clearable
             filterable
-            placeholder="从视频分类多选，不选则不限分类"
+            placeholder="楼层出哪些视频，不选则不限"
             style="width: 100%"
           >
             <ElOption
-              v-for="c in workCategories()"
+              v-for="c in extraWorkCategories()"
               :key="c.id"
               :label="c.name"
               :value="c.id"
             />
           </ElSelect>
-          <p class="mt-1 text-xs text-gray-400">可多选。与标签同时生效：命中任一所选分类</p>
+          <p class="mt-1 text-xs text-gray-400">和位置无关。多选为命中任一，再和标签同时生效。</p>
         </ElFormItem>
         <ElFormItem label="标签">
           <ElSelect
-            v-model="form.tag_ids"
+            v-model="form.draft.tag_id"
             multiple
             clearable
             filterable
-            placeholder="从视频标签多选，不选则不限标签"
+            placeholder="不选则不限标签"
             style="width: 100%"
           >
             <ElOption
@@ -379,7 +476,18 @@ onMounted(async () => {
               :value="t.id"
             />
           </ElSelect>
-          <p class="mt-1 text-xs text-gray-400">可多选。与分类同时生效：命中任一所选标签</p>
+        </ElFormItem>
+        <ElFormItem label="内容排序">
+          <ElSelect v-model="form.draft.order" style="width: 180px">
+            <ElOption v-for="o in orderOpts" :key="o.value" :label="o.label" :value="o.value" />
+          </ElSelect>
+        </ElFormItem>
+        <ElFormItem label="指定作品">
+          <ElInput v-model="form.draft.ids" placeholder="可选，作品 ID 逗号分隔" />
+        </ElFormItem>
+        <ElFormItem label="检索预览">
+          <p class="break-all font-mono text-xs text-gray-500">{{ filterPreview }}</p>
+          <p class="mt-1 text-xs text-gray-400">保存时写入。查分类/标签等属性，不是标题。</p>
         </ElFormItem>
         <ElFormItem label="展示数量">
           <ElInputNumber v-model="form.size" :min="1" :max="30" />
