@@ -3,7 +3,7 @@ import { requestClient } from "#/api/request";
 /**
  * 视频/动漫首页模块(对接 my_service /backend/{video|cartoon}-modules*)。
  *
- * style: 1=1大2小横图 2=2小横图 3=1大横图 4=2竖图 5=竖图横滑 6=横图横滑 7=竖图3X3
+ * style: 1=1大2小横图 2=2小横图 3=1大横图 4=2竖图 5=竖图横滑 6=横图横滑 7=竖图3X3 8=竖图3X2
  * icon: 1最新 2星星 3火
  * 检索条件按 category_ids + tag_ids。
  */
