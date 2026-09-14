@@ -343,14 +343,21 @@ const assetDialog = ref(false);
 const assetLoading = ref(false);
 const assets = ref<MediaNovelApi.Item[]>([]);
 const pickingId = ref("");
-const assetSearch = reactive({ keyword: "" });
+const assetPickedOpts = [
+  { label: "全部", value: "" },
+  { label: "未入库", value: "2" },
+  { label: "已入库", value: "1" },
+];
+const assetSearch = reactive({ keyword: "", picked: "" });
 const assetPage = reactive({ current: 1, size: 10, total: 0 });
 
 async function loadAssets() {
   assetLoading.value = true;
   try {
+    const picked = Number(assetSearch.picked);
     const res = await getMediaNovelsListApi({
       keyword: assetSearch.keyword || undefined,
+      picked: picked || undefined,
       page: assetPage.current,
       size: assetPage.size,
     });
@@ -363,6 +370,13 @@ async function loadAssets() {
 
 function openAssetDialog() {
   assetDialog.value = true;
+  assetPage.current = 1;
+  assetSearch.keyword = "";
+  assetSearch.picked = "";
+  void loadAssets();
+}
+
+function searchAssets() {
   assetPage.current = 1;
   void loadAssets();
 }
@@ -774,9 +788,21 @@ onMounted(() => {
           clearable
           class="w-64"
           placeholder="搜索小说标题"
-          @keyup.enter="loadAssets"
+          @keyup.enter="searchAssets"
         />
-        <ElButton type="primary" @click="loadAssets">查询</ElButton>
+        <ElSelect
+          v-model="assetSearch.picked"
+          style="width: 120px"
+          @change="searchAssets"
+        >
+          <ElOption
+            v-for="o in assetPickedOpts"
+            :key="o.value"
+            :label="o.label"
+            :value="o.value"
+          />
+        </ElSelect>
+        <ElButton type="primary" @click="searchAssets">查询</ElButton>
       </div>
       <ElTable v-loading="assetLoading" :data="assets" border stripe>
         <ElTableColumn label="封面" width="80">

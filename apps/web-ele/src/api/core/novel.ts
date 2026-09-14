@@ -149,6 +149,7 @@ export namespace MediaNovelApi {
 
 export function getMediaNovelsListApi(params: {
   keyword?: string;
+  picked?: number;
   page?: number;
   size?: number;
 }) {
