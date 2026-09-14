@@ -15,6 +15,7 @@ import {
   ElOption,
   ElPagination,
   ElSelect,
+  ElSwitch,
   ElTable,
   ElTableColumn,
   ElTag,
@@ -110,27 +111,38 @@ const dialog = ref(false);
 const isEdit = ref(false);
 const saving = ref(false);
 const formRef = ref();
-const emptyForm = (): NovelApi.SaveBody & { id: number; tagText: string } => ({
+const emptyForm = (): NovelApi.SaveBody & { id: number; categories: string[] } => ({
   id: 0,
   title: "",
   author: "",
   cover: "",
   intro: "",
   category: "",
+  categories: [],
   tags: [],
-  tagText: "",
   is_vip: 0,
   price: 0,
   free_chapter: 1,
   is_audio: 0,
   update_status: 1,
   rank: 0,
+  is_recommend: 0,
   status: 0,
 });
 const form = reactive(emptyForm());
 const rules = {
   title: [{ required: true, message: "标题必填", trigger: "blur" }],
 };
+
+function splitCategories(row: { category?: string; categories?: string[] }) {
+  if (row.categories?.length) {
+    return [...row.categories];
+  }
+  return (row.category || "")
+    .split(/[,，]/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
 
 function openCreate() {
   isEdit.value = false;
@@ -147,14 +159,15 @@ function openEdit(row: NovelApi.Item) {
     cover: row.cover,
     intro: row.intro,
     category: row.category,
+    categories: splitCategories(row),
     tags: row.tags || [],
-    tagText: "",
     is_vip: row.is_vip,
     price: row.price,
     free_chapter: row.free_chapter,
     is_audio: row.is_audio,
     update_status: row.update_status,
     rank: row.rank,
+    is_recommend: row.is_recommend || 0,
     status: row.status,
   });
   dialog.value = true;
@@ -167,12 +180,17 @@ async function handleSave() {
     ElMessage.warning("VIP 专享与金币定价互斥, 二选一");
     return;
   }
+  if (form.status === 1 && !form.categories.length) {
+    ElMessage.warning("上架前请选择本站分类");
+    return;
+  }
   const body: NovelApi.SaveBody = {
     title: form.title,
     author: form.author,
     cover: form.cover,
     intro: form.intro,
-    category: form.category,
+    category: form.categories.join(","),
+    categories: form.categories,
     tags: form.tags || [],
     is_vip: form.is_vip,
     price: Number(form.price) || 0,
@@ -180,6 +198,7 @@ async function handleSave() {
     is_audio: form.is_audio,
     update_status: form.update_status,
     rank: Number(form.rank) || 0,
+    is_recommend: form.is_recommend ? 1 : 0,
     status: form.status,
   };
   saving.value = true;
@@ -199,6 +218,11 @@ async function handleSave() {
 }
 
 async function handleAudit(row: NovelApi.Item, status: number) {
+  if (status === 1 && !splitCategories(row).length) {
+    ElMessage.warning("请先编辑并选择本站分类后再上架");
+    openEdit(row);
+    return;
+  }
   await auditNovelApi(row.id, status);
   ElMessage.success(status === 1 ? "已上架" : "已下架");
   fetchList();
@@ -404,9 +428,17 @@ onMounted(() => {
         <ElButton @click="openAssetDialog">从媒资中心选用</ElButton>
       </div>
 
-      <ElTable v-loading="loading" :data="list" border stripe>
-        <ElTableColumn prop="id" label="ID" width="70" />
-        <ElTableColumn label="封面" width="80">
+      <ElTable
+        v-loading="loading"
+        :data="list"
+        class="comics-table"
+        size="small"
+        border
+        stripe
+        style="width: 100%"
+      >
+        <ElTableColumn prop="id" label="ID" width="52" align="center" />
+        <ElTableColumn label="封面" width="76" align="center">
           <template #default="{ row }">
             <ElImage
               v-if="row.cover"
@@ -419,7 +451,7 @@ onMounted(() => {
             <span v-else class="text-gray-400">-</span>
           </template>
         </ElTableColumn>
-        <ElTableColumn label="标题" min-width="180" show-overflow-tooltip>
+        <ElTableColumn label="标题" min-width="128" show-overflow-tooltip>
           <template #default="{ row }">
             <span>{{ row.title }}</span>
             <ElTag v-if="row.is_audio === 1" type="primary" size="small" class="ml-1">
@@ -427,9 +459,52 @@ onMounted(() => {
             </ElTag>
           </template>
         </ElTableColumn>
-        <ElTableColumn prop="author" label="作者" width="110" />
-        <ElTableColumn prop="category" label="分类" width="100" />
-        <ElTableColumn label="定价" width="120">
+        <ElTableColumn prop="author" label="作者" width="56" show-overflow-tooltip />
+        <ElTableColumn label="分类" width="76">
+          <template #default="{ row }">
+            <template v-if="splitCategories(row).length">
+              <ElTag
+                v-for="name in splitCategories(row)"
+                :key="name"
+                size="small"
+                class="comics-chip"
+              >
+                {{ name }}
+              </ElTag>
+            </template>
+            <span v-else class="text-orange-500">未分类</span>
+          </template>
+        </ElTableColumn>
+        <ElTableColumn label="标签" width="76">
+          <template #default="{ row }">
+            <template v-if="row.tags?.length">
+              <ElTag
+                v-for="name in row.tags"
+                :key="name"
+                type="primary"
+                size="small"
+                class="comics-chip"
+              >
+                {{ name }}
+              </ElTag>
+            </template>
+            <span v-else class="text-gray-400">-</span>
+          </template>
+        </ElTableColumn>
+        <ElTableColumn label="状态" width="68" align="center">
+          <template #default="{ row }">
+            <ElTag :type="statusMap[row.status]?.type" size="small">
+              {{ statusMap[row.status]?.text ?? row.status }}
+            </ElTag>
+          </template>
+        </ElTableColumn>
+        <ElTableColumn label="推荐" width="52" align="center">
+          <template #default="{ row }">
+            <ElTag v-if="row.is_recommend === 1" type="warning" size="small">推荐</ElTag>
+            <span v-else class="text-gray-400">-</span>
+          </template>
+        </ElTableColumn>
+        <ElTableColumn label="定价" width="72" align="center">
           <template #default="{ row }">
             <ElTag v-if="row.is_vip === 1" type="warning" size="small">VIP专享</ElTag>
             <ElTag v-else-if="row.price > 0" type="danger" size="small">
@@ -438,40 +513,35 @@ onMounted(() => {
             <ElTag v-else type="success" size="small">免费</ElTag>
           </template>
         </ElTableColumn>
-        <ElTableColumn prop="free_chapter" label="免费章" width="80" align="center" />
-        <ElTableColumn prop="chapter_count" label="章节数" width="80" align="center" />
-        <ElTableColumn prop="word_count" label="总字数" width="90" align="center" />
-        <ElTableColumn prop="view_count" label="观看" width="80" align="center" />
-        <ElTableColumn prop="buy_count" label="购买" width="80" align="center" />
-        <ElTableColumn label="连载" width="80" align="center">
+        <ElTableColumn prop="free_chapter" label="免费章" width="60" align="center" />
+        <ElTableColumn prop="chapter_count" label="章节数" width="60" align="center" />
+        <ElTableColumn prop="word_count" label="总字数" width="64" align="center" />
+        <ElTableColumn prop="view_count" label="观看" width="52" align="center" />
+        <ElTableColumn prop="buy_count" label="购买" width="52" align="center" />
+        <ElTableColumn label="连载" width="60" align="center">
           <template #default="{ row }">
             {{ row.update_status === 2 ? "完结" : "连载中" }}
           </template>
         </ElTableColumn>
-        <ElTableColumn prop="rank" label="权重" width="70" align="center" />
-        <ElTableColumn label="状态" width="90" align="center">
+        <ElTableColumn prop="rank" label="权重" width="48" align="center" />
+        <ElTableColumn label="操作" width="228" fixed="right">
           <template #default="{ row }">
-            <ElTag :type="statusMap[row.status]?.type" size="small">
-              {{ statusMap[row.status]?.text ?? row.status }}
-            </ElTag>
-          </template>
-        </ElTableColumn>
-        <ElTableColumn label="操作" width="240" fixed="right">
-          <template #default="{ row }">
-            <ElButton link type="primary" @click="openChapters(row)">章节</ElButton>
-            <ElButton link type="primary" @click="openEdit(row)">编辑</ElButton>
-            <ElButton
-              v-if="row.status !== 1"
-              link
-              type="success"
-              @click="handleAudit(row, 1)"
-            >
-              上架
-            </ElButton>
-            <ElButton v-else link type="warning" @click="handleAudit(row, 2)">
-              下架
-            </ElButton>
-            <ElButton link type="danger" @click="handleDelete(row)">删除</ElButton>
+            <div class="comics-ops">
+              <ElButton link type="primary" @click="openChapters(row)">章节</ElButton>
+              <ElButton link type="primary" @click="openEdit(row)">编辑</ElButton>
+              <ElButton
+                v-if="row.status !== 1"
+                link
+                type="success"
+                @click="handleAudit(row, 1)"
+              >
+                上架
+              </ElButton>
+              <ElButton v-else link type="warning" @click="handleAudit(row, 2)">
+                下架
+              </ElButton>
+              <ElButton link type="danger" @click="handleDelete(row)">删除</ElButton>
+            </div>
           </template>
         </ElTableColumn>
       </ElTable>
@@ -506,11 +576,13 @@ onMounted(() => {
         </ElFormItem>
         <ElFormItem label="分类">
           <ElSelect
-            v-model="form.category"
-            placeholder="从小说分类里选"
-            style="width: 100%"
+            v-model="form.categories"
+            class="comics-multi-select"
+            placeholder="可多选，上架前至少选一个"
+            multiple
             clearable
             filterable
+            tag-type="primary"
           >
             <ElOption
               v-for="c in workCategories"
@@ -523,13 +595,14 @@ onMounted(() => {
         <ElFormItem label="标签">
           <ElSelect
             v-model="form.tags"
+            class="comics-multi-select"
             placeholder="从小说标签库多选"
-            style="width: 100%"
             multiple
             clearable
             filterable
             allow-create
             default-first-option
+            tag-type="primary"
           >
             <ElOption
               v-for="t in enabledNovelTags"
@@ -566,6 +639,14 @@ onMounted(() => {
             <ElOption label="连载中" :value="1" />
             <ElOption label="已完结" :value="2" />
           </ElSelect>
+        </ElFormItem>
+        <ElFormItem label="推荐">
+          <ElSwitch
+            v-model="form.is_recommend"
+            :active-value="1"
+            :inactive-value="0"
+          />
+          <span class="ml-2 text-xs text-gray-400">打开后进入「推荐」栏，权重越大越靠前</span>
         </ElFormItem>
         <ElFormItem label="排序权重">
           <ElInputNumber v-model="form.rank" :min="0" />
@@ -747,3 +828,39 @@ onMounted(() => {
     </ElDialog>
   </div>
 </template>
+
+<style scoped>
+.comics-table {
+  width: 100%;
+}
+.comics-table :deep(.el-table__fixed-right) {
+  box-shadow: -6px 0 8px rgba(0, 0, 0, 0.06);
+}
+.comics-table :deep(.el-table__cell) {
+  padding: 4px 6px;
+}
+.comics-chip {
+  margin: 0 2px 2px 0;
+}
+.comics-ops {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  white-space: nowrap;
+}
+.comics-multi-select {
+  width: 100%;
+}
+.comics-multi-select :deep(.el-select__selection) {
+  flex-wrap: wrap;
+}
+.comics-multi-select :deep(.el-select__selected-item) {
+  max-width: 100%;
+}
+.comics-multi-select :deep(.el-tag) {
+  --el-tag-bg-color: var(--el-color-primary);
+  --el-tag-text-color: #fff;
+  --el-tag-border-color: var(--el-color-primary);
+  --el-tag-hover-color: var(--el-color-primary-light-3);
+}
+</style>

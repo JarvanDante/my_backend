@@ -17,6 +17,7 @@ export namespace NovelApi {
     cover: string;
     intro: string;
     category: string;
+    categories?: string[];
     tags: string[];
     is_vip: number;
     price: number;
@@ -31,6 +32,7 @@ export namespace NovelApi {
     like_count: number;
     update_status: number;
     rank: number;
+    is_recommend?: number;
     status: number;
     publish_id: number;
     media_code?: string;
@@ -61,6 +63,7 @@ export namespace NovelApi {
     cover?: string;
     intro?: string;
     category?: string;
+    categories?: string[];
     tags?: string[];
     is_vip?: number;
     price?: number;
@@ -68,6 +71,7 @@ export namespace NovelApi {
     is_audio?: number;
     update_status?: number;
     rank?: number;
+    is_recommend?: number;
     status?: number;
   }
   export interface ChapterBody {
