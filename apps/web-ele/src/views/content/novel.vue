@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { onMounted, reactive, ref } from "vue";
+import { computed, onMounted, reactive, ref } from "vue";
 
 import {
   ElButton,
@@ -36,6 +36,11 @@ import {
   updateNovelApi,
   updateNovelChapterApi,
 } from "#/api/core/novel";
+import {
+  getNovelCategoryListApi,
+  type NovelCategoryApi,
+} from "#/api/core/novel-category";
+import { getTagListApi, type TagApi } from "#/api/core/tag";
 
 defineOptions({ name: "ContentNovel" });
 
@@ -56,6 +61,22 @@ const loading = ref(false);
 const list = ref<NovelApi.Item[]>([]);
 const page = reactive({ current: 1, size: 20, total: 0 });
 const search = reactive({ status: "", category: "", keyword: "" });
+const categories = ref<NovelCategoryApi.Item[]>([]);
+const workCategories = computed(() =>
+  categories.value.filter((c) => c.kind === 0 && c.status === 1),
+);
+const novelTags = ref<TagApi.Item[]>([]);
+const enabledNovelTags = computed(() => novelTags.value.filter((t) => t.status === 1));
+
+async function loadCategories() {
+  const res = await getNovelCategoryListApi({ status: "1", page: 1, size: 200 });
+  categories.value = res.list || [];
+}
+
+async function loadNovelTags() {
+  const res = await getTagListApi({ content_type: 7, page: 1, size: 200 });
+  novelTags.value = res.list || [];
+}
 
 async function fetchList() {
   loading.value = true;
@@ -127,7 +148,7 @@ function openEdit(row: NovelApi.Item) {
     intro: row.intro,
     category: row.category,
     tags: row.tags || [],
-    tagText: (row.tags || []).join(","),
+    tagText: "",
     is_vip: row.is_vip,
     price: row.price,
     free_chapter: row.free_chapter,
@@ -152,9 +173,7 @@ async function handleSave() {
     cover: form.cover,
     intro: form.intro,
     category: form.category,
-    tags: form.tagText
-      ? form.tagText.split(/[,，]/).map((s) => s.trim()).filter(Boolean)
-      : [],
+    tags: form.tags || [],
     is_vip: form.is_vip,
     price: Number(form.price) || 0,
     free_chapter: Number(form.free_chapter) || 0,
@@ -342,7 +361,11 @@ async function pickAsset(row: MediaNovelApi.Item) {
   }
 }
 
-onMounted(fetchList);
+onMounted(() => {
+  loadCategories();
+  loadNovelTags();
+  fetchList();
+});
 </script>
 
 <template>
@@ -352,13 +375,21 @@ onMounted(fetchList);
         <ElSelect v-model="search.status" style="width: 120px" @change="doSearch">
           <ElOption v-for="o in statusOpts" :key="o.value" :label="o.label" :value="o.value" />
         </ElSelect>
-        <ElInput
+        <ElSelect
           v-model="search.category"
           placeholder="分类"
-          style="width: 140px"
+          style="width: 160px"
           clearable
-          @keyup.enter="doSearch"
-        />
+          filterable
+          @change="doSearch"
+        >
+          <ElOption
+            v-for="c in workCategories"
+            :key="c.id"
+            :label="c.name"
+            :value="c.name"
+          />
+        </ElSelect>
         <ElInput
           v-model="search.keyword"
           placeholder="标题/作者关键字"
@@ -474,10 +505,39 @@ onMounted(fetchList);
           <ElInput v-model="form.intro" type="textarea" :rows="3" />
         </ElFormItem>
         <ElFormItem label="分类">
-          <ElInput v-model="form.category" placeholder="如: 都市 / 玄幻" />
+          <ElSelect
+            v-model="form.category"
+            placeholder="从小说分类里选"
+            style="width: 100%"
+            clearable
+            filterable
+          >
+            <ElOption
+              v-for="c in workCategories"
+              :key="c.id"
+              :label="c.name"
+              :value="c.name"
+            />
+          </ElSelect>
         </ElFormItem>
         <ElFormItem label="标签">
-          <ElInput v-model="form.tagText" placeholder="多个标签用逗号分隔" />
+          <ElSelect
+            v-model="form.tags"
+            placeholder="从小说标签库多选"
+            style="width: 100%"
+            multiple
+            clearable
+            filterable
+            allow-create
+            default-first-option
+          >
+            <ElOption
+              v-for="t in enabledNovelTags"
+              :key="t.id"
+              :label="t.name"
+              :value="t.name"
+            />
+          </ElSelect>
         </ElFormItem>
         <ElFormItem label="作品类型">
           <ElSelect v-model="form.is_audio" style="width: 160px">
