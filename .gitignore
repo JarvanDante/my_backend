@@ -6,3 +6,6 @@ turbo-build.log
 dist/
 **/dist/
 _to_delete/
+
+# 打包产物
+*.zip
