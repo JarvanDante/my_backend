@@ -266,7 +266,7 @@ function openEdit(row: DramaModuleApi.Item) {
     id: row.id,
     name: row.name,
     position:
-      row.position && row.position !== "comic_home"
+      row.position && row.position !== "drama_home"
         ? row.position
         : defaultPos(),
     style: row.style || 7,
@@ -476,7 +476,7 @@ onMounted(async () => {
             multiple
             clearable
             filterable
-            placeholder="楼层出哪些小说，不选则不限"
+            placeholder="楼层出哪些短剧，不选则不限"
             style="width: 100%"
           >
             <ElOption

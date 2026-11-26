@@ -1,13 +1,6 @@
 import { requestClient } from "#/api/request";
 
-/**
- * 短剧分类模块(对接 my_service /backend/drama-modules*)。
- *
- * style: 1=1大2小横图 2=2小横图 3=1大横图 4=2竖图 5=竖图横滑 6=横图横滑 7=竖图3X3
- * icon: 1最新 2星星 3火
- * 检索条件为 JSON（tag_id/cat_id/order 等），底层查 Postgres drama 表。
- * 位置：cat_{id}=H5 分类 Tab，按分类权重排。
- */
+/** 短剧分类模块，对接 /backend/drama-modules。 */
 export namespace DramaModuleApi {
   export interface Item {
     id: number;
