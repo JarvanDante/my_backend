@@ -38,6 +38,7 @@ const mediaOpts = [
   { label: "视频", value: "1" },
   { label: "帖子", value: "2" },
   { label: "漫画", value: "4" },
+  { label: "短剧", value: "6" },
   { label: "小说", value: "7" },
   { label: "动漫", value: "8" },
   { label: "抖音", value: "9" },
@@ -54,6 +55,7 @@ const mediaMap: Record<number, string> = {
   1: "视频",
   2: "帖子",
   4: "漫画",
+  6: "短剧",
   7: "小说",
 };
 
