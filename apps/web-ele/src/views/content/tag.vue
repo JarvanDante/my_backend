@@ -38,6 +38,7 @@ const typeOpts = [
   { label: "图集", value: 5 },
   { label: "帖子", value: 6 },
   { label: "小说", value: 7 },
+  { label: "短剧", value: 8 },
 ];
 const typeMap: Record<number, string> = Object.fromEntries(
   typeOpts.map((o) => [o.value, o.label]),

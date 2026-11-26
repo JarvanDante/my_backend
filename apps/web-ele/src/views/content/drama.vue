@@ -37,6 +37,7 @@ import {
   updateDramaApi,
   updateDramaEpisodeApi,
 } from "#/api/core/drama";
+import { getTagListApi, type TagApi } from "#/api/core/tag";
 
 defineOptions({ name: "ContentDrama" });
 
@@ -71,10 +72,17 @@ const categories = ref<DramaCategoryApi.Item[]>([]);
 const workCategories = computed(() =>
   categories.value.filter((c) => c.kind === 0 && c.status === 1),
 );
+const dramaTags = ref<TagApi.Item[]>([]);
+const enabledDramaTags = computed(() => dramaTags.value.filter((t) => t.status === 1));
 
 async function loadCategories() {
   const res = await getDramaCategoryListApi({ status: "1", page: 1, size: 200 });
   categories.value = res.list || [];
+}
+
+async function loadDramaTags() {
+  const res = await getTagListApi({ content_type: 8, page: 1, size: 200 });
+  dramaTags.value = res.list || [];
 }
 
 async function fetchList() {
@@ -370,6 +378,7 @@ async function pickAsset(row: MediaDramaApi.Item) {
 
 onMounted(() => {
   loadCategories();
+  loadDramaTags();
   fetchList();
 });
 </script>
@@ -563,14 +572,21 @@ onMounted(() => {
           <ElSelect
             v-model="form.tags"
             class="drama-multi-select"
-            placeholder="输入后回车添加"
+            placeholder="从短剧标签库多选"
             multiple
             clearable
             filterable
             allow-create
             default-first-option
             tag-type="primary"
-          />
+          >
+            <ElOption
+              v-for="t in enabledDramaTags"
+              :key="t.id"
+              :label="t.name"
+              :value="t.name"
+            />
+          </ElSelect>
         </ElFormItem>
         <ElFormItem label="默认付费">
           <ElSelect v-model="form.is_vip" style="width: 160px">
