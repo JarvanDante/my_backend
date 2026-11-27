@@ -22,6 +22,7 @@ export namespace DramaApi {
     is_recommend: number;
     status: number;
     media_code: string;
+    published_at: string;
     created_at: string;
   }
   export interface Episode {
@@ -59,6 +60,7 @@ export namespace DramaApi {
     rank: number;
     is_recommend: number;
     status: number;
+    published_at?: string;
   }
   export interface EpisodeBody {
     pay_mode: number;

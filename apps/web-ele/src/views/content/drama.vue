@@ -4,6 +4,7 @@ import { computed, onMounted, reactive, ref } from "vue";
 import {
   ElButton,
   ElCard,
+  ElDatePicker,
   ElDialog,
   ElForm,
   ElFormItem,
@@ -147,6 +148,7 @@ const emptyForm = () => ({
   rank: 0,
   is_recommend: 0,
   status: 0,
+  published_at: "" as string,
 });
 const form = reactive(emptyForm());
 const rules = {
@@ -169,6 +171,7 @@ function openEdit(row: DramaApi.Item) {
     rank: row.rank,
     is_recommend: row.is_recommend || 0,
     status: row.status,
+    published_at: row.published_at || "",
   });
   dialog.value = true;
 }
@@ -196,6 +199,7 @@ async function handleSave() {
     rank: Number(form.rank) || 0,
     is_recommend: form.is_recommend ? 1 : 0,
     status: form.status,
+    published_at: form.published_at || "",
   };
   const cover = form.cover.trim();
   if (cover && cover !== originCover.value) {
@@ -500,6 +504,9 @@ onMounted(() => {
           </template>
         </ElTableColumn>
         <ElTableColumn prop="rank" label="权重" width="52" align="center" />
+        <ElTableColumn label="上架时间" width="170">
+          <template #default="{ row }">{{ row.published_at || "-" }}</template>
+        </ElTableColumn>
         <ElTableColumn label="操作" width="270" fixed="right">
           <template #default="{ row }">
             <div class="drama-ops">
@@ -627,6 +634,16 @@ onMounted(() => {
             <ElOption label="下架" :value="2" />
           </ElSelect>
           <span class="ml-2 text-xs text-gray-400">上架需有分类且至少一集可播</span>
+        </ElFormItem>
+        <ElFormItem label="上架时间">
+          <ElDatePicker
+            v-model="form.published_at"
+            type="datetime"
+            clearable
+            value-format="YYYY-MM-DD HH:mm:ss"
+            placeholder="为空则首次上架时自动填写"
+            style="width: 220px"
+          />
         </ElFormItem>
       </ElForm>
       <template #footer>
